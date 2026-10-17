@@ -1,5 +1,5 @@
 // オフラインで動かすための仕組み（一度開いたら、次からは保存した中身で起動。裏で新しい版を取りに行く）
-const CACHE = 'kura-v2';
+const CACHE = 'kura-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
