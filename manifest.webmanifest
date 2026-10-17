@@ -1,0 +1,11 @@
+{
+  "name": "蔵 — 読んだ・観たものの棚",
+  "short_name": "蔵",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eceef1",
+  "theme_color": "#eceef1",
+  "lang": "ja",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}
