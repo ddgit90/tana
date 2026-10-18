@@ -320,12 +320,15 @@ const findItem = (id) => S.items.find((i) => i.id === id);
 /* [いつ, いくら, 状態]。シリーズの巻は「そこまで読んだか」で分ける */
 function spends(x) {
   const o = [];
+  if (x.want) return o; /* ほしい物は、まだ買ってないので入れない */
   if (x.price) o.push([x.pt || x.created, x.price, x.status]);
-  for (const [k, d] of Object.entries(x.v)) if (d && d.p) o.push([d.pt || x.created, d.p, x.series ? (+k <= x.cur ? 'done' : x.status === 'pause' ? 'pause' : 'none') : x.status]);
+  for (const [k, d] of Object.entries(x.v)) if (d && d.p && !(x.ownOn && !d.o)) o.push([d.pt || x.created, d.p, x.series ? (+k <= x.cur ? 'done' : x.status === 'pause' ? 'pause' : 'none') : x.status]);
   return o;
 }
 const spentList = (list) => list.reduce((s, x) => s + spentAll(x), 0);
 const spentAll = (x) => spends(x).reduce((a, [, p]) => a + p, 0);
+/* ほしい物・持ってない巻の値段（買う前） */
+const wishOf = (x) => (x.want ? (x.price || 0) + Object.values(x.v).reduce((a, d) => a + ((d && d.p) || 0), 0) : Object.values(x.v).reduce((a, d) => a + (x.ownOn && d && d.p && !d.o ? d.p : 0), 0));
 
 /* ===== ティア ===== */
 function inTier(list, t) {
@@ -344,7 +347,6 @@ function visible() {
   const q = norm(ui.q);
   let a = itemsOf(S.cat);
   if (ui.filter === 'want') a = a.filter((x) => x.want);
-  else if (ui.filter === 'later') a = a.filter((x) => x.later);
   else if (ui.filter.startsWith('sh:')) a = a.filter((x) => x.sh.includes(ui.filter.slice(3)));
   else if (ui.filter !== 'all') a = a.filter((x) => x.status === ui.filter);
   if (ui.tag) a = a.filter((x) => x.tags.includes(ui.tag));
@@ -388,7 +390,7 @@ function render(anim = false) {
   drawBkHint();
   const n = (f) => all.filter(f).length;
   if (ui.filter.startsWith('sh:') && !shelvesOf(S.cat).some((h) => 'sh:' + h.id === ui.filter)) ui.filter = 'all';
-  const chips = [['all', 'すべて', all.length], ...C.st.map(([k, l]) => [k, l, n((x) => x.status === k)]), ['want', 'ほしい', n((x) => x.want)], ['later', C.later, n((x) => x.later)]];
+  const chips = [['all', 'すべて', all.length], ...C.st.map(([k, l]) => [k, l, n((x) => x.status === k)]), ['want', 'ほしい', n((x) => x.want)]];
   /* タグごとの数 */
   const tc = new Map(); for (const x of all) for (const t of x.tags) tc.set(t, (tc.get(t) || 0) + 1);
   if (ui.tag && !tc.has(ui.tag)) ui.tag = '';
@@ -463,7 +465,7 @@ function drawList(anim = false) {
   if (view === 'shelf' && C.shelf === 'spine') {
     el.innerHTML = `<div class="shelf">${a.map(spineHTML).join('')}</div><p class="shnote">背の高さ＝評価　厚み＝${S.cat === 'book' ? '巻数・ページ数' : S.cat === 'game' ? 'シリーズの作品数' : '巻数'}　金の文字＝★5</p>`;
   } else if (view === 'shelf' && C.shelf === 'ticket') {
-    el.innerHTML = `<div class="tickets">${a.map((x, i) => { const r = rt(x); return `<button class="tk${x.want ? ' want' : ''}" data-id="${esc(x.id)}" style="--col:${colOf(x)};--i:${I(i)}"><div class="l"><div class="t">${esc(x.title)}</div><div class="m">${esc(meta(x)) || '&nbsp;'}</div><div class="m">${esc(stLabel(x.cat, x.status))}${x.series && x.vols ? '　' + progText(x) : ''}${x.later ? '　' + C.later : ''}</div>${x.theater ? `<div class="m">${esc(x.theater)}${x.seat ? '　' + esc(x.seat) : ''}</div>` : ''}${x.fmt.length ? `<div class="fm">${x.fmt.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}</div><div class="r">${r ? `<b class="num">${r}</b>${starsHTML(r)}` : '<small>評価<br>まだ</small>'}${x.date ? `<small class="num">${esc(fmtWhen(x.date))}</small>` : ''}</div></button>`; }).join('')}</div>`;
+    el.innerHTML = `<div class="tickets">${a.map((x, i) => { const r = rt(x); return `<button class="tk${x.want ? ' want' : ''}" data-id="${esc(x.id)}" style="--col:${colOf(x)};--i:${I(i)}"><div class="l"><div class="t">${esc(x.title)}</div><div class="m">${esc(meta(x)) || '&nbsp;'}</div><div class="m">${esc(stLabel(x.cat, x.status))}${x.series && x.vols ? '　' + progText(x) : ''}</div>${x.theater ? `<div class="m">${esc(x.theater)}${x.seat ? '　' + esc(x.seat) : ''}</div>` : ''}${x.fmt.length ? `<div class="fm">${x.fmt.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}</div><div class="r">${r ? `<b class="num">${r}</b>${starsHTML(r)}` : '<small>評価<br>まだ</small>'}${x.date ? `<small class="num">${esc(fmtWhen(x.date))}</small>` : ''}</div></button>`; }).join('')}</div>`;
   } else if (view === 'shelf' && C.shelf === 'screen') {
     el.innerHTML = `<div class="screens">${a.map((x, i) => { const r = rt(x); return `<button class="sc${x.want ? ' want' : ''}" data-id="${esc(x.id)}" style="--i:${I(i)}"><div class="tv vt">${phHTML(x, { prog: false, dust: true })}${x.series && x.vols ? `<span class="ep">${x.cur}/${x.vols}話<i style="--p:${(frac(x) * 100).toFixed(0)}%"></i></span>` : ''}</div><b>${esc(x.title)}</b><small>${r ? '★' + r + '　' : ''}${esc(stLabel(x.cat, x.status))}${x.app ? '　' + esc(x.app) : ''}</small></button>`; }).join('')}</div>`;
   } else if (view === 'shelf') {
@@ -472,7 +474,7 @@ function drawList(anim = false) {
     const kind = C.side ? '' : S.cat === 'art' ? ' artc' : ' poster';
     el.innerHTML = `<div class="covers">${a.map((x, i) => { const r = rt(x); return `<button class="cv${kind}${x.want ? ' want' : ''}" data-id="${esc(x.id)}" style="--i:${I(i)};--col:${colOf(x)}"><div class="bk vt${C.side === 'right' ? '' : ' r'}"><div class="fc">${phHTML(x, { dust: true })}</div><span class="ed"></span></div><b>${esc(x.title)}</b><small>${r ? starsHTML(r) : esc(stLabel(x.cat, x.status))}</small></button>`; }).join('')}</div>`;
   } else {
-    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}" style="--i:${I(i)}"><span class="th vt">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? '<span class="pill">ほしい</span>' : ''}${x.later ? `<span class="pill">${C.later}</span>` : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>`; }).join('')}</ul>`;
+    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}" style="--i:${I(i)}"><span class="th vt">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? '<span class="pill">ほしい</span>' : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>`; }).join('')}</ul>`;
   }
   if (shHead) el.insertAdjacentHTML('afterbegin', shHead);
   hydrate(el);
@@ -496,7 +498,7 @@ function drawRank(el, a, shHead) {
   if (!rated.length) { el.innerHTML = shHead + tabs + `<div class="empty"><b>まだ星をつけたものがない</b>作品を開いて星をつけると、ここにティア表ができる。</div>`; return; }
   el.innerHTML = shHead + tabs + `<div class="tiers">${TIERS.map(([t, lab], ti) => {
     const l = tierItems(rated, t);
-    return `<div class="tier t-${t}${l.length ? '' : ' empty-t'}" style="--i:${ti}"><button class="tlab" data-tier="${t}" aria-label="${t}の並び順"><b>${t}</b><small>${lab}</small>${l.length > 1 ? '<span class="ord">並べる</span>' : ''}</button><div class="ti">${l.length ? l.map((x, j) => `<button data-id="${esc(x.id)}" aria-label="${esc(x.title)}"><span class="th vt">${phHTML(x, { prog: false })}</span>${l.length > 1 ? `<span class="rk">${j + 1}</span>` : ''}</button>`).join('') : '—'}</div></div>`;
+    return `<div class="tier t-${t}${l.length ? '' : ' empty-t'}" style="--i:${ti}"><button class="tlab" data-tier="${t}" aria-label="${t}の並び順"><b>${t}</b><small>${lab}</small>${l.length > 1 ? '<span class="ord">並べる</span>' : ''}</button><div class="ti">${l.length ? l.map((x, j) => `<button data-id="${esc(x.id)}" aria-label="${esc(x.title)}"><span class="th vt">${phHTML(x, { prog: false })}</span></button>`).join('') : '—'}</div></div>`;
   }).join('')}</div><p class="shnote">左ほど上。段の名前を押すと、段の中の順番を決められる。${un ? `<br>星がまだの作品（${un}）は入らない。` : ''}</p>`;
   hydrate(el);
 }
@@ -510,7 +512,7 @@ function nextGroups(cat) {
   const take = (title, sub, list, kind) => { const l = list.filter((x) => !used.has(x.id)); l.forEach((x) => used.add(x.id)); if (l.length) g.push({ title, sub, list: l, kind }); };
   if (cat === 'art') {
     const up = (x) => (x.until ? dayDiff(x.until) : 9999);
-    take('見に行きたい', '会期が近い順', a.filter((x) => x.later && x.status !== 'done' && (!x.until || up(x) >= 0)).sort((x, y) => up(x) - up(y)), 'art');
+    take('見に行きたい', '会期が近い順', a.filter((x) => x.status !== 'done' && !x.want && (!x.until || up(x) >= 0)).sort((x, y) => up(x) - up(y)), 'art');
     take('ほしい', '画集やグッズなど', a.filter((x) => x.want), 'want');
     return g;
   }
@@ -520,14 +522,14 @@ function nextGroups(cat) {
   if (C.own) take('次に買う', '持ってない巻', ser.filter((x) => x.ownOn && missing(x).length).sort(upd), 'buy');
   take(cat === 'manga' || cat === 'book' ? '続きを読む' : cat === 'anime' ? '続きを観る' : 'シリーズの続き', '', ser.filter((x) => canRead(x) && !x.want && !(x.status === 'done' && x.done)).sort(upd), 'cont');
   take(cat === 'game' ? 'プレイ中' : '途中', '', a.filter((x) => x.status === 'doing' && !x.series).sort(upd), 'doing');
-  take(C.later, '', a.filter((x) => x.later && x.status !== 'done'), 'later');
+  take({ manga: '未読（積んでる）', book: '未読（積んでる）', anime: 'まだ観てない', movie: 'まだ観てない', game: '未プレイ' }[cat], '', a.filter((x) => x.status === 'none' && !x.want).sort((x, y) => y.created - x.created), 'none');
   take('ほしい', '', a.filter((x) => x.want), 'want');
   return g;
 }
 const nextCount = () => nextGroups(S.cat).reduce((s, g) => s + g.list.length, 0);
 function drawNext() {
   const C = CATS[S.cat], el = $('#list'), gs = nextGroups(S.cat), u = C.vol;
-  if (!gs.length) { el.innerHTML = `<div class="empty"><b>つぎにやることは、今はない</b>${S.cat === 'art' ? '作品に「見に行きたい」を付けて会期を入れると、締め切りが近い順にここに並ぶ。' : `シリーズの${u}数や「ほしい」「${C.later}」を付けると、ここにまとまる。`}</div>`; return; }
+  if (!gs.length) { el.innerHTML = `<div class="empty"><b>つぎにやることは、今はない</b>${S.cat === 'art' ? '「まだ」の作品に会期を入れると、締め切りが近い順にここに並ぶ。' : `シリーズの${u}数や「ほしい」、まだ手をつけてない作品がここにまとまる。`}</div>`; return; }
   let i = 0;
   el.innerHTML = gs.map((g) => `<section class="ngrp"><h3>${esc(g.title)}${g.sub ? `<small>${esc(g.sub)}</small>` : ''}</h3>${g.list.map((x) => {
     let line = '', act = '', due = '';
@@ -571,6 +573,7 @@ function haveHTML(x) {
   else if (x.seat) r.push(['座席', esc(x.seat)]);
   if (x.fmt.length) r.push(['形式', x.fmt.map(esc).join('・')]);
   if (S.set.money && spentAll(x)) r.push(['使ったお金', `<span class="num">${yen(spentAll(x))}</span>`]);
+  if (S.set.money && wishOf(x)) r.push(['買う前の値段', `<span class="num">${yen(wishOf(x))}</span>（合計には入らない）`]);
   return r.length ? `<div class="sec"><h4>持ち方・置き場所</h4><dl class="meta">${r.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl></div>` : '';
 }
 function renderPage(x) {
@@ -580,7 +583,7 @@ function renderPage(x) {
   $('#page').innerHTML = `
     <div class="pbar"><button class="ib" data-act="back" aria-label="戻る"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.5 5.5 9l5.5 5.5"/></svg></button><button class="btn sm" data-act="edit">編集</button></div>
     <div class="pwrap">
-      ${heroHTML(x)}<p class="herohint">指でドラッグすると傾けられる・2回タップで正面</p>
+      ${heroHTML(x)}
       <h2 class="ptitle">${esc(x.title)}${x.round > 1 ? `<span class="roundb">${x.round}回目</span>` : ''}</h2>${x.yomi ? `<p class="pyomi">${esc(x.yomi)}</p>` : ''}<p class="psub">${esc(meta(x))}</p>
       <div class="flags" id="pFlags"></div>
       ${dl ? `<div class="sec"><div class="box dustnote"><span>ほこりをかぶってる…<small>最後に触ってから${Math.floor(dustDays(x))}日</small></span><button class="btn sm" data-act="dust">ふっと払う</button></div></div>` : ''}
@@ -602,7 +605,7 @@ function renderPage(x) {
   drawFlags(x); drawSt(x); drawRate(x); if (x.series && !art) { drawVols(x); drawVnotes(x); } if (prog) drawProg(x); drawRounds(x); drawShelves(x); drawTl(x);
   hydrate($('#page'));
 }
-const drawFlags = (x) => { $('#pFlags').innerHTML = `<button class="flag${x.want ? ' on' : ''}" data-flag="want">ほしい</button><button class="flag${x.later ? ' on' : ''}" data-flag="later">${CATS[x.cat].later}</button>`; };
+const drawFlags = (x) => { $('#pFlags').innerHTML = `<button class="flag${x.want ? ' on' : ''}" data-flag="want">ほしい</button>`; };
 const drawSt = (x) => { $('#pSt').innerHTML = CATS[x.cat].st.map(([k, l]) => `<button data-st="${k}" class="${x.status === k ? 'on' : ''}">${l}</button>`).join(''); };
 function drawRounds(x) {
   const C = CATS[x.cat], past = x.rounds.slice().reverse();
@@ -827,7 +830,7 @@ function uniq(key, base) { return [...new Set([...base, ...S.items.map((x) => x[
 function openEdit(id) {
   const x = id ? findItem(id) : null;
   const cat = x ? x.cat : S.cat, C = CATS[cat];
-  draft = x ? { ...x, tags: [...x.tags], fmt: [...x.fmt] } : { id: null, cat, title: '', creator: '', year: '', status: C.st.some((s) => s[0] === ui.filter) ? ui.filter : 'none', rating: 0, exp: 0, want: ui.filter === 'want', later: ui.filter === 'later', series: cat === 'anime', vols: 0, cur: 0, done: false, kind: ui.kind === 'drama' ? 'drama' : '', tags: ui.tag ? [ui.tag] : [], review: '', memo: '', place: '', date: '', until: '', platform: '', hours: '', color: '', img: false, v: {}, fmt: [], media: '' };
+  draft = x ? { ...x, tags: [...x.tags], fmt: [...x.fmt] } : { id: null, cat, title: '', creator: '', year: '', status: C.st.some((s) => s[0] === ui.filter) ? ui.filter : 'none', rating: 0, exp: 0, want: ui.filter === 'want', later: false, series: cat === 'anime', vols: 0, cur: 0, done: false, kind: ui.kind === 'drama' ? 'drama' : '', tags: ui.tag ? [ui.tag] : [], review: '', memo: '', place: '', date: '', until: '', platform: '', hours: '', color: '', img: false, v: {}, fmt: [], media: '' };
   draft.newImg = null; draft.rmImg = false;
   const f = $('#fEdit');
   $('#editT').textContent = x ? '編集' : `${C.name}を追加`;
@@ -853,7 +856,7 @@ function openEdit(id) {
     $('#finL').firstChild.textContent = C.ser.finQ; $('#finH').textContent = C.ser.finH;
   }
   $('#ownF').hidden = !C.own;
-  $('#stSeg').innerHTML = C.st.map(([k, l]) => `<button type="button" data-est="${k}" class="${draft.status === k ? 'on' : ''}">${l}</button>`).join('');
+  drawStSeg();
   setSw('#serSw', draft.series); setSw('#doneSw', draft.done); $('#serF').hidden = !draft.series;
   $('#delBtn').hidden = !x;
   const fill2 = (id, a) => { $(id).innerHTML = a.map((v) => `<option value="${esc(v)}">`).join(''); };
@@ -871,6 +874,11 @@ function drawTagPick() {
   for (const x of S.items) for (const t of x.tags) { const c = cnt.get(t) || [0, 0]; c[x.cat === draft.cat ? 0 : 1]++; cnt.set(t, c); }
   const list = [...cnt].sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || coll.compare(a[0], b[0]));
   $('#tagPick').innerHTML = list.length ? list.map(([t, [a]]) => `<button type="button" class="chip${have.has(t) ? ' on' : ''}" data-tp="${esc(t)}">#${esc(t)}${a ? `<small>${a}</small>` : ''}</button>`).join('') : '<p class="hint">まだタグがない。下に入力すると次からここに出る。</p>';
+}
+function drawStSeg() {
+  const C = CATS[draft.cat];
+  $('#stSeg').innerHTML = C.st.map(([k, l]) => `<button type="button" data-est="${k}" class="${!draft.want && draft.status === k ? 'on' : ''}">${l}</button>`).join('') + `<button type="button" data-est="want" class="${draft.want ? 'on' : ''}">ほしい</button>`;
+  $('#priceL').textContent = draft.want ? '値段（円・ほしい物は買うまで合計に入らない）' : '値段（円）';
 }
 function drawWhen() { $('#whenF').hidden = draft.status !== 'done'; drawWhenUI($('#whenUI'), draft); }
 function drawProgF() {
@@ -929,7 +937,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
     hours: game ? dec(f.hours.value) || '' : '',
     platform: game ? f.platform.value.trim() : '', media: m, kind: draft.cat === 'anime' && draft.kind === 'drama' ? 'drama' : '', rel: draft.cat === 'art' ? '' : f.reldate.value, app: appOn ? f.app.value.trim() : '', where: whereOn ? f.where.value.trim() : '',
     theater: th ? f.theater.value.trim() : '', seat: th ? f.seat.value.trim() : '', fmt: th ? draft.fmt.slice() : [],
-    price, pt: price ? (x && x.price ? x.pt || x.created : now) : 0,
+    price, pt: price ? (x && x.price && !(x.want && !draft.want) ? x.pt || x.created : now) : 0,
     review: f.review.value.trim(), memo: f.memo.value.trim(), tags: [...new Set(f.tags.value.split(/[\s、,，]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean))].slice(0, 12),
   };
   if (ser && v.cur > 0 && draft.status === 'none') draft.status = 'doing';
@@ -1080,8 +1088,8 @@ function drawMoney() {
   $('#mnySt').innerHTML = tot ? C.st.filter(([k]) => by[k]).map(([k, l]) => `<div class="mrow"><span>${l}${k === 'none' ? '<small>まだ手をつけてない分</small>' : ''}</span><b class="num">${yen(by[k])}</b><i style="--w:${(by[k] / tot * 100).toFixed(1)}%"></i></div>`).join('') : '<p class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</p>';
   $('#mnyY').innerHTML = [...yrs].sort((a, b) => b[0] - a[0]).map(([y, p]) => `<tr><td>${y}年</td><td>${yen(p)}</td></tr>`).join('') || '<tr><td class="hint">—</td><td></td></tr>';
   $('#mnyTop').innerHTML = all.filter((x) => spentAll(x)).sort((a, b) => spentAll(b) - spentAll(a)).slice(0, 5).map((x) => `<li><button data-mid="${esc(x.id)}"><b>${esc(x.title)}</b><span class="num">${yen(spentAll(x))}</span></button></li>`).join('') || '<li class="hint">—</li>';
-  const every = spentList(S.items);
-  $('#mnyAll').textContent = every !== tot ? `全部の部屋の合計は ${yen(every)}。年ごと・部屋ごとは設定から見られる。` : '';
+  const every = spentList(S.items), wish = all.reduce((a, x) => a + wishOf(x), 0);
+  $('#mnyAll').textContent = (wish ? `ほしい物・持ってない巻の値段 ${yen(wish)}（買うまで合計に入らない）。` : '') + (every !== tot ? `全部の部屋の合計は ${yen(every)}。年ごと・部屋ごとは設定から見られる。` : '');
 }
 
 /* ===== 設定 ===== */
@@ -1214,7 +1222,7 @@ document.addEventListener('click', (e) => {
       if (v === 'done') { askDone(x, redraw); return; }
       setStatus(x, v); touch(x); drawSt(x); if (x.series) drawVols(x); drawTl(x); return;
     }
-    const fg = t.closest('[data-flag]'); if (fg) { x[fg.dataset.flag] = !x[fg.dataset.flag]; touch(x); drawFlags(x); return; }
+    const fg = t.closest('[data-flag]'); if (fg) { const k = fg.dataset.flag; x[k] = !x[k]; if (k === 'want' && !x.want && x.price) x.pt = Date.now(); touch(x); drawFlags(x); if (S.set.money) renderPage(x); return; }
     const sr = t.closest('#pRate [data-star]'); if (sr) {
       const i = +sr.dataset.star, cur = rt(x); x.rating = cur === i ? i - 0.5 : i; if (x.series && volRates(x).length) x.rateFix = true;
       logEv(x, 'rate', x.rating); touch(x); drawRate(x); drawTl(x); const s = $(`#pRate [data-star="${i}"]`); s.classList.add('pop'); burst(s); return;
@@ -1247,7 +1255,7 @@ document.addEventListener('click', (e) => {
     }
     void C;
   }
-  const est = t.closest('[data-est]'); if (est) { draft.status = est.dataset.est; $$('#stSeg button').forEach((b) => b.classList.toggle('on', b === est)); drawWhen(); return; }
+  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } drawStSeg(); drawWhen(); return; }
   const wmb = t.closest('[data-wm]'); if (wmb) { const box = wmb.closest('.whenui'), st = box.id === 'whenUI' ? draft : doneCtx; if (!st) return; st.date = readWhen(box, st) || st.date; st.wm = wmb.dataset.wm; drawWhenUI(box, st); return; }
   const es = t.closest('#editRate [data-estar]'); if (es) { const i = +es.dataset.estar; draft.rating = draft.rating === i ? i - 0.5 : i; drawEditRate(); $(`#editRate [data-estar="${i}"]`).classList.add('pop'); return; }
   const xs = t.closest('#editExp [data-xstar]'); if (xs) { const i = +xs.dataset.xstar; draft.exp = draft.exp === i ? i - 0.5 : i; drawEditRate(); $(`#editExp [data-xstar="${i}"]`).classList.add('pop'); return; }
