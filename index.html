@@ -72,7 +72,8 @@
     <label class="f"><span id="creatorL">作者</span><input name="creator" autocomplete="off" maxlength="80"></label>
     <label class="f">年<input name="year" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="例：2019"></label>
   </div>
-  <label class="f" id="seasonF">シーズン・放送時期<input name="season" autocomplete="off" maxlength="30" placeholder="例：2期／2024年春"></label>
+  <div id="kindF"><span class="hint">種類</span><div class="seg sm" id="kindSeg" style="margin-top:6px"><button type="button" data-kind="anime">アニメ</button><button type="button" data-kind="drama">ドラマ</button></div></div>
+  <label class="f" id="seasonF">シーズン・放送時期<input name="season" autocomplete="off" maxlength="30" placeholder="例：2期／シーズン3／2024年春"></label>
   <div class="r2" id="artF">
     <label class="f">見た場所<input name="place" autocomplete="off" maxlength="80" placeholder="例：国立西洋美術館"></label>
     <label class="f">会期（いつまで）<input name="until" type="date"></label>
@@ -101,6 +102,7 @@
       <label class="f" id="ownF" style="margin-top:10px"><span id="ownL">持ってる巻（飛び飛びでもOK。空なら記録しない）</span><input name="own" autocomplete="off" placeholder="例：1-5, 7, 9-10"></label>
       <div class="tg" style="margin-top:10px"><span id="finL">完結してる<small id="finH"></small></span><button type="button" class="sw2" id="doneSw" role="switch" aria-checked="false" aria-label="完結"></button></div>
     </div>
+    <label class="f" id="relF"><span id="relL">次の新刊の発売日（わかれば）</span><input name="reldate" type="date"></label>
   </div>
 
   <div class="grp" id="progG">
@@ -135,7 +137,11 @@
 
   <label class="f">感想<textarea name="review" maxlength="5000" placeholder="思ったこと"></textarea></label>
   <label class="f">メモ<input name="memo" autocomplete="off" maxlength="300" placeholder="例：友だちのおすすめ"></label>
-  <label class="f">タグ（スペースか、で区切る）<input name="tags" autocomplete="off" maxlength="200" placeholder="例：SF 泣ける"></label>
+  <div class="tagbox">
+    <div class="tagrow"><span class="hint">タグ</span><button type="button" class="tagopen" data-act="tagpick" id="tagPickB">登録したタグから選ぶ ▾</button></div>
+    <div class="tagpick" id="tagPick" hidden></div>
+    <label class="f"><input name="tags" autocomplete="off" maxlength="200" placeholder="新しいタグはここに（スペースか、で区切る）" aria-label="タグ"></label>
+  </div>
   <div class="acts"><button type="button" class="btn dan" id="delBtn" data-act="delete">消す</button><button type="button" class="btn" data-act="close">やめる</button><button class="btn pri" value="ok">保存</button></div>
 </form></dialog>
 <datalist id="pfList"><option value="Switch"><option value="Switch 2"><option value="PS5"><option value="PS4"><option value="Xbox"><option value="PC（Steam）"><option value="スマホ"><option value="レトロ"></datalist>
@@ -220,6 +226,17 @@
   <div class="tower" id="tower"></div>
   <div class="towerbase"></div>
   <p class="hint" id="towH"></p>
+  <button type="button" class="btn sm pri" data-act="close">閉じる</button>
+</div></dialog>
+
+<!-- 使ったお金 -->
+<dialog id="dMoney"><div class="sh">
+  <h3 id="mnyT"></h3>
+  <div class="mtotal"><b class="num" id="mnyN"></b><small id="mnyS"></small></div>
+  <div class="grp"><span class="gt">状態ごと</span><div id="mnySt"></div></div>
+  <div class="grp"><span class="gt">年ごと</span><table class="ytable" id="mnyY"></table></div>
+  <div class="grp"><span class="gt">たくさん使った作品</span><ul class="mtop" id="mnyTop"></ul></div>
+  <p class="hint" id="mnyAll"></p>
   <button type="button" class="btn sm pri" data-act="close">閉じる</button>
 </div></dialog>
 
