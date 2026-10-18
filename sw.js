@@ -1,8 +1,13 @@
 // オフラインで動かすための仕組み（一度開いたら、次からは保存した中身で起動。裏で新しい版を取りに行く）
-const CACHE = 'kura-v3';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon.png'];
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting())); });
-self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
+const CACHE = 'kura-v4';
+const FILES = ['./', './index.html', './kura.css', './kura.js', './manifest.webmanifest', './icon.png'];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+});
+self.addEventListener('activate', (e) => {
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+});
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
