@@ -71,10 +71,10 @@
   </div>
   <p class="hint" id="photoHint" hidden>巻ごとの写真は、作品のページで巻をタップすると入れられる。</p>
   <label class="f">タイトル<input name="title" required autocomplete="off" maxlength="120"></label>
-  <label class="f">よみがな（なくてもOK。入れるとタイトル順が五十音どおりになる）<input name="yomi" autocomplete="off" maxlength="120" placeholder="例：しんげきのきょじん"></label>
+  <label class="f adv">よみがな（なくてもOK。入れるとタイトル順が五十音どおりになる）<input name="yomi" autocomplete="off" maxlength="120" placeholder="例：しんげきのきょじん"></label>
   <div class="r2">
-    <label class="f"><span id="creatorL">作者</span><input name="creator" autocomplete="off" maxlength="80"></label>
-    <label class="f">年<input name="year" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="例：2019"></label>
+    <label class="f"><span id="creatorL">作者</span><input name="creator" list="crList" autocomplete="off" maxlength="80"></label>
+    <label class="f adv">年<input name="year" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="例：2019"></label>
   </div>
   <div id="kindF"><span class="hint">種類</span><div class="seg sm" id="kindSeg" style="margin-top:6px"></div></div>
   <div id="musicF">
@@ -84,10 +84,12 @@
       <div class="r2" style="margin-top:6px"><label class="f">ライブの日<input name="ldate" type="date"></label><label class="f">開演<input name="ltime" type="time"></label></div>
       <span class="hint">チケット</span><div class="seg sm" id="tstSeg" style="margin:6px 0 10px"></div>
       <div class="r2"><label class="f">会場<input name="venue" list="venueList" autocomplete="off" maxlength="40" placeholder="例：日本武道館"></label><label class="f">座席・エリア<input name="lseat" autocomplete="off" maxlength="30" placeholder="例：アリーナB 12列"></label></div>
+      <div class="tagpick qpick" data-q="venue"></div>
     </div>
     <label class="f" id="tracksF" style="margin-top:6px"><span id="tracksL">曲名（1行に1曲・順番どおり）</span><textarea name="tracks" maxlength="8000" placeholder="1曲目の曲名&#10;2曲目の曲名"></textarea></label>
   </div>
-  <label class="f" id="seasonF">シーズン・放送時期<input name="season" autocomplete="off" maxlength="30" placeholder="例：2期／シーズン3／2024年春"></label>
+  <div class="tagpick qpick" data-q="creator"></div>
+  <label class="f adv" id="seasonF">シーズン・放送時期<input name="season" autocomplete="off" maxlength="30" placeholder="例：2期／シーズン3／2024年春"></label>
   <div class="r2" id="artF">
     <label class="f">見た場所<input name="place" autocomplete="off" maxlength="80" placeholder="例：国立西洋美術館"></label>
     <label class="f">会期（いつまで）<input name="until" type="date"></label>
@@ -103,8 +105,8 @@
   <div class="grp">
     <span class="gt" id="rateL">評価</span>
     <div class="rate erate" id="editRate"></div>
-    <span class="gt">期待度（始める前の気持ち。あとで実際の評価と比べられる）</span>
-    <div class="rate erate small" id="editExp"></div>
+    <div class="adv" style="display:grid;gap:12px"><span class="gt">期待度（始める前の気持ち。あとで実際の評価と比べられる）</span>
+    <div class="rate erate small" id="editExp"></div></div>
   </div>
 
   <div class="grp" id="serG">
@@ -118,10 +120,10 @@
       <label class="f" id="ownF" style="margin-top:10px"><span id="ownL">持ってる巻（飛び飛びでもOK。空なら記録しない）</span><input name="own" autocomplete="off" placeholder="例：1-5, 7, 9-10"></label>
       <div class="tg" style="margin-top:10px"><span id="finL">完結してる<small id="finH"></small></span><button type="button" class="sw2" id="doneSw" role="switch" aria-checked="false" aria-label="完結"></button></div>
     </div>
-    <label class="f" id="relF"><span id="relL">次の新刊の発売日（わかれば）</span><input name="reldate" type="date"></label>
+    <label class="f adv" id="relF"><span id="relL">次の新刊の発売日（わかれば）</span><input name="reldate" type="date"></label>
   </div>
 
-  <div class="grp" id="progG">
+  <div class="grp adv" id="progG">
     <span class="gt">進み具合（わからなければ空でOK）</span>
     <div class="r2" id="pagesF">
       <label class="f">読んだページ<input name="page" inputmode="numeric" autocomplete="off" placeholder="例：120"></label>
@@ -133,12 +135,15 @@
     </div>
   </div>
 
-  <div class="grp" id="haveG">
+  <div class="grp adv" id="haveG">
     <span class="gt" id="haveL">持ち方・置き場所</span>
     <label class="f" id="pfF">プラットフォーム（機種）<input name="platform" list="pfList" autocomplete="off" maxlength="30" placeholder="例：Switch"></label>
+    <div class="tagpick qpick" data-q="platform"></div>
     <div class="seg sm" id="mediaSeg"></div>
     <label class="f" id="appF"><span id="appL">アプリ</span><input name="app" list="appList" autocomplete="off" maxlength="40"></label>
+    <div class="tagpick qpick" data-q="app"></div>
     <label class="f" id="whereF"><span id="whereL">置き場所</span><input name="where" list="whereList" autocomplete="off" maxlength="40" placeholder="例：自室の本棚／実家"></label>
+    <div class="tagpick qpick" data-q="where"></div>
     <div id="theaterF">
       <span class="hint">観た形式（いくつでも）</span>
       <div class="seg sm" id="fmtSeg" style="margin:6px 0 10px"></div>
@@ -146,16 +151,18 @@
         <label class="f">劇場<input name="theater" list="thList" autocomplete="off" maxlength="40" placeholder="例：TOHOシネマズ新宿"></label>
         <label class="f">座席<input name="seat" autocomplete="off" maxlength="20" placeholder="例：H-12"></label>
       </div>
+      <div class="tagpick qpick" data-q="theater" style="margin-top:8px"></div>
     </div>
     <label class="f" id="priceF"><span id="priceL">値段（円）</span><input name="price" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="例：1200"></label>
     <div id="buyF"><span class="hint">買った時期</span><div class="seg sm" id="buySeg" style="margin-top:6px"><button type="button" data-buy="now">最近（今日）</button><button type="button" data-buy="year">年を入れる</button><button type="button" data-buy="unk">覚えてない</button></div><label class="f" id="buyYF" style="margin-top:8px"><input name="buyY" inputmode="numeric" maxlength="4" placeholder="例：2019" aria-label="買った年"></label></div>
     <div class="r2" id="liveMoney"><label class="f">グッズ（円）<input name="gp" inputmode="numeric" autocomplete="off" maxlength="9"></label><label class="f">遠征費（交通・宿）<input name="tp" inputmode="numeric" autocomplete="off" maxlength="9"></label></div>
   </div>
-  <label class="f" id="priceArtF">値段（円・チケット代など）<input name="priceArt" inputmode="numeric" autocomplete="off" maxlength="9"></label>
+  <label class="f adv" id="priceArtF">値段（円・チケット代など）<input name="priceArt" inputmode="numeric" autocomplete="off" maxlength="9"></label>
 
-  <label class="f">感想<textarea name="review" maxlength="5000" placeholder="思ったこと"></textarea></label>
-  <label class="f">メモ<input name="memo" autocomplete="off" maxlength="300" placeholder="例：友だちのおすすめ"></label>
-  <div class="tagbox">
+  <button type="button" class="btn sm advb" id="advB" data-act="adv">もっと詳しく（よみがな・持ち方・値段・感想・メモなど）▾</button>
+  <label class="f adv">感想<textarea name="review" maxlength="5000" placeholder="思ったこと"></textarea></label>
+  <label class="f adv">メモ<input name="memo" autocomplete="off" maxlength="300" placeholder="例：友だちのおすすめ"></label>
+  <div class="tagbox adv">
     <div class="tagrow"><span class="hint">関連作品（原作・アニメ化・主題歌など）</span><button type="button" class="tagopen" data-act="linkpick">＋ 選ぶ</button></div>
     <div class="tagpick" id="linkChips"></div>
   </div>
@@ -167,7 +174,7 @@
   <div class="acts"><button type="button" class="btn dan" id="delBtn" data-act="delete">消す</button><button type="button" class="btn" data-act="close">やめる</button><button class="btn pri" value="ok">保存</button></div>
 </form></dialog>
 <datalist id="pfList"><option value="Switch"><option value="Switch 2"><option value="PS5"><option value="PS4"><option value="Xbox"><option value="PC（Steam）"><option value="スマホ"><option value="レトロ"></datalist>
-<datalist id="genreList"></datalist><datalist id="venueList"></datalist><datalist id="appList"></datalist><datalist id="svcList"></datalist><datalist id="whereList"></datalist><datalist id="thList"></datalist>
+<datalist id="genreList"></datalist><datalist id="crList"></datalist><datalist id="venueList"></datalist><datalist id="appList"></datalist><datalist id="svcList"></datalist><datalist id="whereList"></datalist><datalist id="thList"></datalist>
 
 <!-- 巻ごと -->
 <dialog id="dVol"><div class="sh">
@@ -267,7 +274,7 @@
 <dialog id="dFilt"><div class="sh">
   <h3 id="fltT">タグで絞り込む</h3>
   <div id="fltB"></div>
-  <div class="acts"><button type="button" class="btn" data-act="fltclear">絞り込みをやめる</button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
+  <div class="acts fltacts"><button type="button" class="btn" data-act="close">閉じる</button><button type="button" class="btn pri" data-act="fltgo" id="fltGo">絞り込む</button></div>
 </div></dialog>
 
 <!-- タグを選ぶ（追加・編集） -->
@@ -300,6 +307,7 @@
   <h3>設定<small class="ver" id="ver"></small></h3>
   <div class="grp">
     <div class="tg"><span>時間で部屋の明かりが変わる<small>夜（19時〜朝6時）は照明を落とす。芸術の部屋は暗い展示室になる</small></span><button type="button" class="sw2" id="todSw" role="switch" aria-checked="false" aria-label="時間で明かりが変わる"></button></div>
+    <div class="tg"><span>かんたん追加<small>追加の画面を短くする。よみがな・持ち方・値段・感想などは「もっと詳しく」を押すと出る</small></span><button type="button" class="sw2" id="simpleSw" role="switch" aria-checked="false" aria-label="かんたん追加"></button></div>
     <div class="tg"><span>ほこり<small>しばらく触ってない「途中」の作品に、うっすらほこりが積もる</small></span><button type="button" class="sw2" id="dustSw" role="switch" aria-checked="false" aria-label="ほこり"></button></div>
     <div class="tg"><span>使ったお金を記録する<small>作品や巻ごとに値段を入れると、部屋ごと・年ごとの合計が出る</small></span><button type="button" class="sw2" id="moneySw" role="switch" aria-checked="false" aria-label="使ったお金"></button></div>
   </div>

@@ -709,3 +709,29 @@ input::-webkit-date-and-time-value{text-align:left}
 .fbar span:first-child{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fbar .fbn{flex:1;min-width:0;color:var(--sub);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fbar button{flex:none;width:30px;height:30px;border-radius:50%;background:var(--field);font-size:15px}
+
+/* ===== v11 追加 ===== */
+#fEdit.simple:not(.advOpen) .adv{display:none!important}
+.advb{width:100%;border-style:dashed;color:var(--sub)}
+.qpick{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px}
+.qpick .chip{height:30px;font-size:12.5px;padding:0 11px}
+.fsel{display:flex;align-items:center;gap:10px;margin:0 0 6px;padding:8px 12px;border-radius:12px;background:var(--card);font-size:12.5px}
+.fsel span{flex:1;min-width:0;font-weight:700}
+#dFilt .sh{padding-bottom:0}
+.fltacts{position:sticky;bottom:0;margin:0 -18px;padding:12px 18px calc(env(safe-area-inset-bottom) + 14px);background:var(--room2);border-top:1px solid var(--line)}
+.chip.shf{border-style:dashed}
+/* 中の巻・曲をその場で開く */
+.xbtn{display:inline-block;margin:4px 4px 0 0;font:700 11px/1 var(--gothic);padding:4px 9px;border-radius:10px;border:1px solid var(--acc);color:var(--acc)}
+.xbtn.on{background:var(--acc);color:var(--accInk)}
+.cv .xbtn{margin-top:6px}
+.kidsrow{grid-column:1/-1}
+.kids{padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line);animation:rowin .3s var(--ease)}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(58px,1fr));gap:10px 8px}
+.kid{text-align:center;min-width:0}
+.kid .kth{display:block;aspect-ratio:2/3;border-radius:2px;overflow:hidden;box-shadow:0 4px 8px -4px rgba(0,0,0,.5)}
+.kid small{display:block;margin-top:4px;font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kid.rd small{color:var(--acc);font-weight:700}
+.kfoot{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+.kidsli{list-style:none;padding:8px 0}
+.jk.open .sl{outline:2px solid var(--acc);outline-offset:2px}
+.tracks .th.sq{flex:none;width:34px;height:34px;margin:0}
