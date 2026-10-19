@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v12';
+const VER = 'v16';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,14 +31,14 @@ const CATS = {
 CATS.music = { name: '音楽', unit: '作品', creator: 'アーティスト', vol: '曲', volN: (n) => `${n}曲目`, st: [['none', 'まだ'], ['doing', '聴いてる'], ['done', '聴いた']], shelf: 'disc', side: '', verb: '聴く', did: '聴いた', act: '聴いた', start: '聴きはじめた', doneQ: '聴いた？', whenQ: 'いつ聴いた？', room: '#18181d', own: false, ser: null, media: ['CD', 'レコード', '配信', 'ダウンロード'] };
 const ORDER = ['manga', 'anime', 'movie', 'music', 'book', 'game', 'art'];
 /* 部屋の中の種類（アニメ／ドラマ、曲／アルバム／ライブ） */
-const KINDS = { anime: [['anime', 'アニメ'], ['drama', 'ドラマ']], music: [['song', '曲'], ['album', 'アルバム'], ['live', 'ライブ']] };
+const KINDS = { anime: [['anime', 'アニメ'], ['drama', 'ドラマ']], music: [['song', 'シングル'], ['album', 'アルバム'], ['live', 'ライブ']] };
 const kindOf = (x) => x.kind || (KINDS[x.cat] ? KINDS[x.cat][0][0] : '');
 const TST = [['apply', '申し込んだ'], ['lot', '抽選中'], ['win', '当選'], ['lose', '落選'], ['went', '行った']];
 const tstLabel = (k) => (TST.find((q) => q[0] === k) || ['', ''])[1];
 /* 「〇〇別」で絞り込める項目 */
-const FKEYS = (cat) => [['genre', 'ジャンル', cat === 'music'], ['creator', CATS[cat].creator, true], ['platform', '機種', cat === 'game'], ['media', '持ち方', !!CATS[cat].media], ['app', cat === 'manga' || cat === 'book' ? '電子書籍のアプリ' : '配信サービス', !!CATS[cat].media], ['where', '置き場所', !!CATS[cat].media], ['theater', '劇場', cat === 'movie'], ['venue', '会場', cat === 'music'], ['place', '見た場所', cat === 'art']].filter((q) => q[2]);
+const FKEYS = (cat) => [['genre', 'ジャンル', cat === 'music'], ['creator', cat === 'music' && S.items.some(isCl) ? 'アーティスト・作曲家' : CATS[cat].creator, true], ['perf', '演奏者', cat === 'music'], ['platform', '機種', cat === 'game'], ['media', '持ち方', !!CATS[cat].media], ['app', cat === 'manga' || cat === 'book' ? '電子書籍のアプリ' : '配信サービス', !!CATS[cat].media], ['where', '置き場所', !!CATS[cat].media], ['theater', '劇場', cat === 'movie'], ['venue', '会場', cat === 'music'], ['place', '見た場所', cat === 'art']].filter((q) => q[2]);
 const MEDIA_M = [['CD', 'CD'], ['レコード', 'レコード'], ['配信', '配信'], ['ダウンロード', 'DL']];
-const GENRES = ['邦楽', '洋楽', 'クラシック', 'アニソン', 'ボカロ', 'サントラ', 'ジャズ', 'K-POP'];
+const GENRES = ['邦楽', '洋楽', 'クラシック', 'アニソン', 'ボカロ', 'サントラ', 'BGM', 'ジャズ', 'K-POP'];
 const BOOM_MAX = 5;
 /* 作品ごとの数え方（漫画・本は「話」で数えることもできる） */
 function Cx(x) {
@@ -64,7 +64,7 @@ const TIERS = [['S', '★5'], ['A', '★4.5'], ['B', '★4'], ['C', '★3〜3.5'
 const tierOf = (r) => { if (!(r > 0)) return ''; const h = Math.round(r * 2) / 2; return h >= 5 ? 'S' : h >= 4.5 ? 'A' : h >= 4 ? 'B' : h >= 3 ? 'C' : h >= 2 ? 'D' : 'E'; };
 
 /* ===== データ（前の版から引き継ぐ） ===== */
-const DEF = () => ({ v: 3, cat: 'manga', view: Object.fromEntries(ORDER.map((k) => [k, 'shelf'])), sort: 'new', items: [], shelves: [], set: { tod: true, money: false, dust: true, hidden: [], simple: false }, best: {}, boom: {}, lastBackup: 0 });
+const DEF = () => ({ v: 3, cat: 'manga', view: Object.fromEntries(ORDER.map((k) => [k, 'shelf'])), sort: 'new', items: [], shelves: [], set: { tod: true, money: false, dust: true, hidden: [], simple: false }, tagGroups: [], best: {}, boom: {}, lastBackup: 0 });
 let S = load();
 function load() {
   try {
@@ -82,6 +82,7 @@ function normalize(d) {
   if (!o.best || typeof o.best !== 'object') o.best = {};
   if (!o.boom || typeof o.boom !== 'object') o.boom = {};
   if (!Array.isArray(o.set.hidden)) o.set.hidden = [];
+  if (!Array.isArray(o.tagGroups)) o.tagGroups = [];
   /* ティアの段の分け方が変わったので、S以外の並び順はリセット */
   if ((d.v || 1) < 3) for (const x of o.items) if (x.tk && x.tk !== 'S') { delete x.tk; delete x.tord; }
   o.v = 3;
@@ -98,10 +99,11 @@ function fix(x) {
   delete x.own;
   if (!Array.isArray(x.fmt)) x.fmt = [];
   if (!Array.isArray(x.links)) x.links = [];
+  if (typeof x.perf !== 'string') x.perf = '';
   return x;
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存できなかった（保存領域がいっぱいかも）'); } }
-const ui = { filter: 'all', media: '', F: {}, Ft: null, open: new Set(), adv: false, fk: '', fv: '', tagEdit: false, q: '', tag: '', tagOpen: false, kind: '', genre: '', genreOpen: false, byear: new Date().getFullYear(), rtab: 'tier', vmode: 'open', tow: 'stack' };
+const ui = { filter: 'all', media: '', F: {}, Ft: null, open: new Set((() => { try { return JSON.parse(localStorage['kura.open'] || '[]'); } catch (e) { return []; } })()), adv: false, fk: '', fv: '', tagEdit: false, q: '', tag: '', tagOpen: false, kind: '', genre: '', genreOpen: false, byear: new Date().getFullYear(), rtab: 'tier', vmode: 'open', tow: 'stack' };
 
 /* 写真（IndexedDB）。作品の写真は「id」、巻の写真は「id~巻」で保存 */
 const idb = (() => {
@@ -278,8 +280,8 @@ function genHTML(x, vn) {
     case 'anime': return `<div class="gen g-anime" style="--col:${c}"><em>${esc(vn || x.coverVol ? CATS.anime.volN(vn || x.coverVol) : x.season || (x.kind === 'drama' ? 'ドラマ' : 'TV'))}</em><b style="font-size:${fit(10.5, 76, 7)}">${t}</b></div>`;
     case 'game': return `<div class="gen g-game" style="--col:${c};--fg:${fg};--pc:${pfColor(x.platform)}"><em>${esc(x.platform || 'GAME')}</em><b style="font-size:${fit(12, 74, 8)}">${t}</b><i></i>${cr ? `<small>${cr}</small>` : ''}</div>`;
     case 'music': {
-      const k = kindOf(x), em = k === 'live' ? `LIVE${x.ldate ? ' ' + x.ldate.slice(0, 4) : ''}` : k === 'album' ? 'ALBUM' : 'SINGLE';
-      return `<div class="gen g-music" style="--col:${c};--fg:${fg}"><i></i><em>${em}</em><b style="font-size:${fit(13, 62, 7)}">${t}</b>${cr ? `<small>${cr}</small>` : ''}</div>`;
+      const k = kindOf(x), em = x._em || (k === 'live' ? `LIVE${x.ldate ? ' ' + x.ldate.slice(0, 4) : ''}` : x.media === 'CD' ? (k === 'album' ? 'CD ALBUM' : 'CD SINGLE') : x.media === 'レコード' ? (k === 'album' ? 'LP' : '7" SINGLE') : k === 'album' ? 'ALBUM' : 'SINGLE');
+      return `<div class="gen g-music${x.media === 'CD' ? ' cd' : ''}" style="--col:${c};--fg:${fg}"><i></i><em>${em}</em><b style="font-size:${fit(13, 62, 7)}">${t}</b>${cr ? `<small>${cr}</small>` : ''}</div>`;
     }
     default: {
       const h = hash(x.id + x.title), bg = ['#efe9dc', '#e9e5db', '#f1ece2', '#e4e7e9', '#ece4dc'][h % 5], p = (k) => PALETTE[(h >>> k) % 8];
@@ -292,7 +294,10 @@ function phHTML(x, o = {}) {
   const k = imgKey(x);
   return `<div class="ph"${k ? ` data-img="${esc(k)}"` : ''}>${genHTML(x)}${o.prog === false ? '' : progBar(x)}${o.dust ? dustHTML(x) : ''}</div>`;
 }
-const meta = (x) => x.cat === 'music' ? (kindOf(x) === 'live' ? [x.creator, x.venue, x.ldate ? fmtWhen(x.ldate) : ''] : [kindOf(x) === 'album' ? 'アルバム' : '', x.creator, x.genre, x.year]).filter(Boolean).join('　') : [x.kind === 'drama' ? 'ドラマ' : '', x.creator, x.cat === 'game' ? x.platform : '', x.season, x.year].filter(Boolean).join('　');
+/* 文章の中のURLを押せるリンクにする（http(s)://〜） */
+const linkify = (t) => esc(t).replace(/https?:\/\/[^\s<>"'（）「」『』、。！？]+/g, (u) => { const clean = u.replace(/[.,!?;:)\]]+$/, ''), rest = u.slice(clean.length); let label = clean.replace(/^https?:\/\/(www\.)?/, ''); if (label.length > 42) label = label.slice(0, 40) + '…'; return `<a class="ulink" href="${clean}" target="_blank" rel="noopener noreferrer">${label}</a>${rest}`; });
+const isCl = (x) => x.cat === 'music' && kindOf(x) !== 'live' && (x.genre || '').trim() === 'クラシック';
+const meta = (x) => x.cat === 'music' ? (kindOf(x) === 'live' ? [x.creator, x.venue, x.ldate ? fmtWhen(x.ldate) : ''] : [kindOf(x) === 'album' ? 'アルバム' : '', x.creator, isCl(x) ? x.perf : '', x.genre, x.year]).filter(Boolean).join('　') : [x.kind === 'drama' ? 'ドラマ' : '', x.creator, x.cat === 'game' ? x.platform : '', x.season, x.year].filter(Boolean).join('　');
 /* 日付：'2015' / '2015-05' / '2015-05-03' / '' */
 function fmtWhen(d) {
   if (!d) return '時期不明';
@@ -400,7 +405,7 @@ function visible() {
   if (fOn()) a = a.filter((x) => matchF(x, ui.F));
   if (KINDS[S.cat] && ui.kind) a = a.filter((x) => kindOf(x) === ui.kind);
   if (S.cat === 'music' && ui.media) a = a.filter((x) => x.media === ui.media);
-  if (q) a = a.filter((x) => norm([x.title, x.yomi, x.creator, x.memo, x.place, x.platform, x.app, x.where, x.theater, x.season, x.genre, x.venue, ...x.tags].join(' ')).includes(q));
+  if (q) a = a.filter((x) => norm([x.title, x.yomi, x.creator, x.perf, x.memo, x.place, x.platform, x.app, x.where, x.theater, x.season, x.genre, x.venue, ...x.tags].join(' ')).includes(q));
   const by = {
     new: (x, y) => y.created - x.created,
     upd: (x, y) => y.updated - x.updated,
@@ -550,10 +555,20 @@ function drawList(anim = false) {
 
 const albumTap = (x) => x.cat === 'music' && kindOf(x) === 'album';
 const canKids = (x) => albumTap(x) || (!!x.series && x.vols > 0 && x.vols <= 300 && x.unit !== 'ep' && !light(x));
+function togOpen(id) { if (ui.open.has(id)) ui.open.delete(id); else ui.open.add(id); try { localStorage['kura.open'] = JSON.stringify([...ui.open].slice(-60)); } catch (e) {} drawList(); }
+const discCls = (x) => (x.media === 'CD' ? ' cd' : '');
+/* アルバムの中の曲：シングルと同じ見た目で出す（写真はその曲のがあればそれ、なければアルバムの） */
+function trkPh(x, i) { const d = x.v[i] || {}, k = d.img ? `${x.id}~${i}` : imgKey(x); return `<div class="ph"${k ? ` data-img="${esc(k)}"` : ''}>${genHTML({ ...x, title: d.t || `${i}曲目`, _em: `TRACK ${i}` })}</div>`; }
+function trackCards(P, withAlbum) {
+  const view = S.view.music, T = (x, i) => esc((x.v[i] || {}).t || `${i}曲目`), sub = (x, i) => (withAlbum ? `${esc(x.title)}・` : '') + `${i}曲目`, at = (x, i) => `data-kid="${esc(x.id)}" data-kn="${i}" style="--col:${colOf(x)}"`;
+  if (view === 'shelf') return `<div class="discs">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<button class="jk single trk${discCls(x)}" ${at(x, i)}><span class="art"><i class="rec"></i><span class="sl vt">${trkPh(x, i)}</span></span><b>${T(x, i)}</b><small>${sub(x, i)}${d.r ? `　★${d.r}` : ''}</small></button>`; }).join('')}</div>`;
+  if (view === 'cover') return `<div class="covers">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<button class="cv sq trk" ${at(x, i)}><div class="bk vt r"><div class="fc">${trkPh(x, i)}</div><span class="ed"></span></div><b>${T(x, i)}</b><small>${d.r ? starsHTML(d.r) : sub(x, i)}</small></button>`; }).join('')}</div>`;
+  return `<ul class="rows">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<li><button class="row trk" ${at(x, i)}><span class="th vt sq">${trkPh(x, i)}</span><span class="tx"><b>${T(x, i)}</b><small>${withAlbum ? `${esc(x.title)}　` : ''}${i}曲目${x.creator ? '　' + esc(x.creator) : ''}</small>${d.c ? '<span class="pill">感想あり</span>' : ''}</span><span class="rt">${d.r ? `<b class="num">${d.r}</b><br>${starsHTML(d.r)}` : '<small>—</small>'}</span></button></li>`; }).join('')}</ul>`;
+}
 function xbtn(x) { if (!canKids(x) || albumTap(x)) return ''; const C = Cx(x); return `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}" data-xopen="${esc(x.id)}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols}${C.vol}</span>`; }
 function kidsHTML(x) {
   const C = Cx(x), n = Math.min(x.vols || 0, 300);
-  if (x.cat === 'music') return `<div class="kids">${n ? '' : '<p class="hint" style="margin:0 0 8px">まだ曲が入ってない。「＋ 曲を足す」か、アルバムの「編集」で曲名を1行に1曲ずつ貼ると入る。</p>'}<ol class="tracks">${Array.from({ length: n }, (_, k) => { const i = k + 1, d = x.v[i] || {}; return `<li><button data-kid="${esc(x.id)}" data-kn="${i}"><span class="n num">${i}</span><span class="tt"><b>${esc(d.t || C.volN(i))}</b>${d.c ? `<small>${esc(d.c)}</small>` : ''}</span>${d.r ? `<span class="num r">★${d.r}</span>` : ''}</button></li>`; }).join('')}</ol><button class="lnk" data-act="kidadd" data-kadd="${esc(x.id)}" style="margin-top:8px">＋ 曲を足す</button><div class="kfoot"><button class="lnk" data-oid="${esc(x.id)}">${kindOf(x) === 'live' ? 'ライブ' : 'アルバム'}のページを開く ›</button><button class="lnk" data-xopen="${esc(x.id)}">閉じる ▴</button></div></div>`;
+  if (x.cat === 'music') return `<div class="kids trk">${n ? trackCards(Array.from({ length: n }, (_, k) => [x, k + 1])) : '<p class="hint" style="margin:0 0 8px">まだ曲が入ってない。「＋ 曲を足す」か、アルバムの「編集」で曲名を1行に1曲ずつ貼ると入る。</p>'}<div class="kfoot"><button class="lnk" data-act="kidadd" data-kadd="${esc(x.id)}">＋ 曲を足す</button><button class="lnk" data-oid="${esc(x.id)}">${kindOf(x) === 'live' ? 'ライブ' : 'アルバム'}のページ ›</button><button class="lnk" data-xopen="${esc(x.id)}">閉じる ▴</button></div></div>`;
   return `<div class="kids"><div class="kgrid">${Array.from({ length: n }, (_, k) => { const i = k + 1, d = x.v[i] || {}, key = d.img ? `${x.id}~${i}` : ''; return `<button class="kid${i <= x.cur ? ' rd' : ''}" data-kid="${esc(x.id)}" data-kn="${i}"><span class="kth"><span class="ph"${key ? ` data-img="${esc(key)}"` : ''}>${genHTML(x, i)}</span></span><small>${C.volN(i)}${d.r ? ` ★${d.r}` : ''}${d.c ? '・感想' : ''}</small></button>`; }).join('')}</div><div class="kfoot"><button class="lnk" data-oid="${esc(x.id)}">作品のページを開く ›</button><button class="lnk" data-xopen="${esc(x.id)}">閉じる ▴</button></div></div>`;
 }
 /* 音楽の「曲」：アルバムの中の曲もまとめて出す */
@@ -564,11 +579,11 @@ function albumTracksHTML() {
     for (let i = 1; i <= Math.min(x.vols, 300); i++) { const d = x.v[i] || {}; if (!d.t) continue; if (q && !norm(d.t + ' ' + x.title + ' ' + (x.creator || '')).includes(q)) continue; rows.push([x, i, d]); }
   }
   if (!rows.length) return '';
-  return `<h3 class="sech">アルバムの中の曲（${rows.length}）</h3><ol class="tracks">${rows.map(([x, i, d]) => `<li><button data-kid="${esc(x.id)}" data-kn="${i}"><span class="th sq">${phHTML(x, { prog: false })}</span><span class="tt"><b>${esc(d.t)}</b><small>${esc(x.title)}・${i}曲目${x.creator ? `・${esc(x.creator)}` : ''}</small></span>${d.r ? `<span class="num r">★${d.r}</span>` : ''}</button></li>`).join('')}</ol>`;
+  return `<h3 class="sech">アルバムの中の曲（${rows.length}）</h3>${trackCards(rows, true)}`;
 }
 function jacketHTML(x, i) {
   const r = rt(x);
-  return `<button class="jk${x.want ? ' want' : ''}${kindOf(x) === 'song' ? ' single' : ''}${ui.open.has(x.id) ? ' open' : ''}" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${Math.min(i, 30)};--col:${colOf(x)}"><span class="art"><i class="rec"></i><span class="sl vt">${phHTML(x, { prog: false, dust: true })}</span></span><b>${esc(x.title)}</b><small>${albumTap(x) ? `${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}　` : ''}${esc(x.creator || '')}${r ? `　★${r}` : ''}</small></button>` + (ui.open.has(x.id) && canKids(x) ? `<div class="kidsrow">${kidsHTML(x)}</div>` : '');
+  return `<button class="jk${x.want ? ' want' : ''}${kindOf(x) === 'song' ? ' single' : ''}${discCls(x)}${ui.open.has(x.id) ? ' open' : ''}" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${Math.min(i, 30)};--col:${colOf(x)}"><span class="art"><i class="rec"></i><span class="sl vt">${phHTML(x, { prog: false, dust: true })}</span></span><b>${esc(x.title)}</b><small>${albumTap(x) ? `${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}　` : ''}${esc(x.creator || '')}${r ? `　★${r}` : ''}</small></button>` + (ui.open.has(x.id) && canKids(x) ? `<div class="kidsrow">${kidsHTML(x)}</div>` : '');
 }
 function liveTicketHTML(x, i) {
   const r = rt(x), d = x.ldate ? dayDiff(x.ldate) : null, fut = d != null && d >= 0 && x.tst !== 'went';
@@ -603,7 +618,10 @@ function drawRank(el, a, shHead) {
 }
 
 const bestOf = (cat, y) => (((S.best[cat] || {})[y]) || []).filter((id) => findItem(id));
-const boomOf = (m) => (S.boom[m] || []).filter((id) => findItem(id));
+const trkItem = (x, i) => ({ id: `${x.id}~${i}`, cat: 'music', title: (x.v[i] || {}).t || `${i}曲目`, creator: x.creator || '', yomi: '', tags: [], kind: 'song', media: x.media, _alb: x, _n: i });
+function trkRef(id) { const [a, n] = String(id).split('~'); if (!n) return null; const x = findItem(a); return x && +n <= x.vols && (x.v[n] || {}).t ? trkItem(x, +n) : null; }
+const boomItem = (id) => findItem(id) || trkRef(id);
+const boomOf = (m) => (S.boom[m] || []).filter(boomItem);
 const ym = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const ymText = (m) => `${+m.slice(0, 4)}年${+m.slice(5)}月`;
 function drawBest(el, head) {
@@ -615,7 +633,7 @@ function drawBest(el, head) {
 }
 function drawBoom(el, head) {
   const now = ym(), months = [...new Set([now, ...Object.keys(S.boom).filter((m) => boomOf(m).length)])].sort().reverse();
-  el.innerHTML = head + `<p class="shnote" style="text-align:left;margin:0 2px 12px">その月にハマってたものを${BOOM_MAX}つまで。年間ベスト10を選ぶときに上に出る。</p>` + months.map((m, i) => { const l = boomOf(m).map(findItem); return `<section class="bmon" style="--i:${i}"><div class="bmh"><b>${ymText(m)}</b><button class="pick" data-boompick="${m}">選ぶ（${l.length}/${BOOM_MAX}）</button></div>${l.length ? `<div class="bmi">${l.map((x) => `<button data-id="${esc(x.id)}"><span class="th sq vt">${phHTML(x, { prog: false })}</span><small>${esc(x.title)}</small></button>`).join('')}</div>` : '<p class="hint">まだ選んでない</p>'}</section>`; }).join('') +
+  el.innerHTML = head + `<p class="shnote" style="text-align:left;margin:0 2px 12px">その月にハマってたものを${BOOM_MAX}つまで。年間ベスト10を選ぶときに上に出る。</p>` + months.map((m, i) => { const l = boomOf(m).map(boomItem); return `<section class="bmon" style="--i:${i}"><div class="bmh"><b>${ymText(m)}</b><button class="pick" data-boompick="${m}">選ぶ（${l.length}/${BOOM_MAX}）</button></div>${l.length ? `<div class="bmi">${l.map((x) => `<button ${x._alb ? `data-kid="${esc(x._alb.id)}" data-kn="${x._n}"` : `data-id="${esc(x.id)}"`}><span class="th sq vt">${x._alb ? trkPh(x._alb, x._n) : phHTML(x, { prog: false })}</span><small>${esc(x.title)}</small></button>`).join('')}</div>` : '<p class="hint">まだ選んでない</p>'}</section>`; }).join('') +
     `<p class="hint" style="margin:16px 2px 6px">前の月を足す</p><div class="addrow"><label class="f"><input type="month" id="boomMonth" max="${now}" aria-label="月"></label><button class="btn sm" data-act="boomadd">選ぶ</button></div>`;
   hydrate(el);
 }
@@ -738,7 +756,7 @@ function musicHTML(x) {
 function honorsHTML(x) {
   const out = [];
   for (const [y, ids] of Object.entries(S.best[x.cat] || {})) { const i = ids.indexOf(x.id); if (i >= 0) out.push(`${y}年のベスト10　${i + 1}位`); }
-  if (x.cat === 'music') { const ms = Object.keys(S.boom).filter((m) => (S.boom[m] || []).includes(x.id)).sort().reverse(); if (ms.length) out.push(`マイブーム：${ms.map(ymText).join('・')}`); }
+  if (x.cat === 'music') { const ms = Object.keys(S.boom).filter((m) => (S.boom[m] || []).some((q) => q === x.id || q.startsWith(x.id + '~'))).sort().reverse(); if (ms.length) out.push(`マイブーム：${ms.map(ymText).join('・')}`); }
   return out.length ? `<div class="honors">${out.map((t) => `<span>${esc(t)}</span>`).join('')}</div>` : '';
 }
 function renderPage(x) {
@@ -750,7 +768,7 @@ function renderPage(x) {
     <div class="pbar"><button class="ib" data-act="back" aria-label="戻る"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.5 5.5 9l5.5 5.5"/></svg></button><button class="btn sm" data-act="edit">編集</button></div>
     <div class="pwrap">
       ${heroHTML(x)}
-      <h2 class="ptitle">${esc(x.title)}${x.round > 1 ? `<span class="roundb">${x.round}回目</span>` : ''}</h2>${x.yomi ? `<p class="pyomi">${esc(x.yomi)}</p>` : ''}<p class="psub">${esc(meta(x))}</p>${mus && x.creator ? `<p class="psub"><button class="artist" data-artist="${esc(x.creator)}">${esc(x.creator)}のまとめ ›</button></p>` : ''}${honorsHTML(x)}
+      <h2 class="ptitle">${esc(x.title)}${x.round > 1 ? `<span class="roundb">${x.round}回目</span>` : ''}</h2>${x.yomi ? `<p class="pyomi">${esc(x.yomi)}</p>` : ''}<p class="psub">${esc(meta(x))}</p>${mus && x.creator ? `<p class="psub"><button class="artist" data-artist="${esc(x.creator)}">${isCl(x) ? '作曲家：' : ''}${esc(x.creator)}のまとめ ›</button></p>` : ''}${mus && isCl(x) && x.perf ? `<p class="psub"><button class="artist" data-artist="${esc(x.perf)}">演奏者：${esc(x.perf)}のまとめ ›</button></p>` : ''}${honorsHTML(x)}
       ${dl ? `<div class="sec"><div class="box dustnote"><span>ほこりをかぶってる…<small>最後に触ってから${Math.floor(dustDays(x))}日</small></span><button class="btn sm" data-act="dust">ふっと払う</button></div></div>` : ''}
       <div class="sec"><h4>状態</h4><div class="seg" id="pSt"></div><div id="pRounds"></div></div>
       <div class="sec"><h4>評価（同じ星をもう一度押すと半分）</h4><div class="rate" id="pRate"></div><div id="pAvg"></div>${rt(x) > 0 ? '<button class="lnk rerate" data-act="rerate">再評価する</button>' : ''}</div>
@@ -758,14 +776,14 @@ function renderPage(x) {
       ${mus ? musicHTML(x) : ''}
       ${x.series && !art && !mus ? `<div class="sec"><h4>シリーズ</h4><div class="box" id="pVols"></div></div>` : ''}
       ${prog ? `<div class="sec"><h4>進み具合</h4><div class="box" id="pProg"></div></div>` : ''}
-      ${x.review ? `<div class="sec"><h4>感想</h4><div class="box"><p class="txt">${esc(x.review)}</p></div></div>` : ''}
-      ${x.memo ? `<div class="sec"><h4>メモ</h4><div class="box"><p class="txt" style="font-family:var(--gothic);font-size:14.5px">${esc(x.memo)}</p></div></div>` : ''}
+      ${x.review ? `<div class="sec"><h4>感想</h4><div class="box"><p class="txt">${linkify(x.review)}</p></div></div>` : ''}
+      ${x.memo ? `<div class="sec"><h4>メモ</h4><div class="box"><p class="txt" style="font-family:var(--gothic);font-size:14.5px">${linkify(x.memo)}</p></div></div>` : ''}
       ${x.series && !mus ? '<div id="pVnotes"></div>' : ''}
       ${x.links.some(findItem) ? `<div class="sec"><h4>関連</h4><div class="links">${x.links.map(findItem).filter(Boolean).map(linkCard).join('')}</div></div>` : ''}
       ${x.tags.length ? `<div class="sec"><div class="tags">${x.tags.map((t) => `<button data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}</div></div>` : ''}
       ${haveHTML(x)}
       <div class="sec"><h4>棚</h4><div class="shchips" id="pSh"></div></div>
-      <div class="sec"><dl class="meta">${x.place ? `<dt>見た場所</dt><dd>${esc(x.place)}</dd>` : ''}${x.until ? `<dt>会期</dt><dd class="num">${esc(x.until)}まで</dd>` : ''}${x.status === 'done' || x.date ? `<dt>${art ? '見た時期' : x.cat === 'game' ? 'クリアした時期' : x.cat === 'movie' ? '観た時期' : x.cat === 'anime' ? '観終えた時期' : '読み終えた時期'}</dt><dd class="num">${esc(fmtWhen(x.date))}</dd>` : ''}<dt>登録</dt><dd class="num">${new Date(x.created).toLocaleDateString('ja-JP')}</dd></dl></div>
+      <div class="sec"><dl class="meta">${x.place ? `<dt>見た場所</dt><dd>${esc(x.place)}</dd>` : ''}${x.until ? `<dt>会期</dt><dd class="num">${esc(x.until)}まで</dd>` : ''}${x.status === 'done' || x.date ? `<dt>${art ? '見た時期' : x.cat === 'game' ? 'クリアした時期' : x.cat === 'movie' ? '観た時期' : x.cat === 'anime' ? '観終えた時期' : x.cat === 'music' ? (kindOf(x) === 'live' ? '行った日' : '聴いた時期') : '読み終えた時期'}</dt><dd class="num">${esc(fmtWhen(x.date))}</dd>` : ''}<dt>登録</dt><dd class="num">${new Date(x.created).toLocaleDateString('ja-JP')}</dd></dl></div>
       ${!x.review ? `<p class="hint" style="margin-top:16px">感想やメモ、写真、置き場所は「編集」から。</p>` : ''}
       <details class="tl" id="pTl"></details>
     </div>`;
@@ -1024,7 +1042,7 @@ function openEdit(id) {
   $('#whenL').textContent = C.whenQ;
   f.vols.value = draft.vols || ''; f.cur.value = draft.cur || '';
   f.own.value = x && x.unit === 'ep' ? rangeText(x.ownB || []) : x && x.ownOn ? rangeText(Object.keys(x.v).filter((k) => x.v[k].o).map(Number)) : '';
-  f.genre.value = draft.genre || ''; f.ldate.value = draft.ldate || ''; f.ltime.value = draft.ltime || ''; f.venue.value = draft.venue || ''; f.lseat.value = draft.lseat || ''; f.gp.value = draft.gp || ''; f.tp.value = draft.tp || '';
+  f.genre.value = draft.genre || ''; f.perf.value = draft.perf || ''; f.ldate.value = draft.ldate || ''; f.ltime.value = draft.ltime || ''; f.venue.value = draft.venue || ''; f.lseat.value = draft.lseat || ''; f.gp.value = draft.gp || ''; f.tp.value = draft.tp || '';
   f.tracks.value = x && cat === 'music' ? Array.from({ length: x.vols || 0 }, (_, i) => (x.v[i + 1] && x.v[i + 1].t) || '').join('\n') : '';
   f.page.value = draft.page || ''; f.pages.value = draft.pages || ''; f.pct.value = draft.pct !== '' && draft.pct != null ? draft.pct : ''; f.hours.value = draft.hours || '';
   f.platform.value = draft.platform || ''; f.app.value = draft.app || ''; f.where.value = draft.where || ''; f.theater.value = draft.theater || ''; f.seat.value = draft.seat || '';
@@ -1053,7 +1071,7 @@ function openEdit(id) {
   $('#delBtn').hidden = !x;
   const fill2 = (id, a) => { $(id).innerHTML = a.map((v) => `<option value="${esc(v)}">`).join(''); };
   fill2('#crList', [...new Set(S.items.filter((q) => q.cat === cat).map((q) => q.creator).filter(Boolean))]);
-  fill2('#genreList', uniq('genre', GENRES)); fill2('#venueList', uniq('venue', []));
+  fill2('#genreList', uniq('genre', GENRES)); fill2('#perfList', uniq('perf', [])); fill2('#venueList', uniq('venue', []));
   fill2('#whereList', uniq('where', LISTS.where)); fill2('#appList', uniq('app', LISTS.app).filter((v) => !LISTS.svc.includes(v))); fill2('#svcList', uniq('app', LISTS.svc).filter((v) => !LISTS.app.includes(v))); fill2('#thList', uniq('theater', []));
   drawEditRate(); drawPhoto(); drawSwatches(); drawWhen(); drawProgF(); drawHave(); drawRelL(); drawMusicF(); drawLinkChips(); drawQP();
   /* かんたん追加：よく使う欄だけ見せて、残りは「もっと詳しく」 */
@@ -1069,7 +1087,7 @@ const drawKind = () => { $('#kindSeg').innerHTML = (KINDS[draft.cat] || []).map(
 function drawQP() {
   const f = $('#fEdit'), m = draft.media || '';
   const top = (key, pred) => { const c = new Map(); for (const x of S.items) if (x[key] && (!pred || pred(x))) c.set(x[key], (c.get(x[key]) || 0) + 1); return [...c].sort((a, b) => b[1] - a[1]).slice(0, key === 'creator' ? 4 : 6).map((q) => q[0]); };
-  const sets = { app: top('app', (x) => (m === '配信' ? x.media === '配信' : x.media === '電子' || x.media === '両方')), where: top('where'), platform: top('platform'), theater: top('theater'), venue: top('venue'), creator: top('creator', (x) => x.cat === draft.cat) };
+  const sets = { app: top('app', (x) => (m === '配信' ? x.media === '配信' : x.media === '電子' || x.media === '両方')), where: top('where'), platform: top('platform'), theater: top('theater'), venue: top('venue'), perf: top('perf'), creator: top('creator', (x) => x.cat === draft.cat) };
   for (const el of $$('.qpick')) {
     const k = el.dataset.q, cur = (f[k] && f[k].value || '').trim(), l = (sets[k] || []).filter((v) => v !== cur);
     el.innerHTML = l.map((v) => `<button type="button" class="chip" data-qk="${k}" data-qv="${esc(v)}">${esc(v)}</button>`).join(''); el.hidden = !l.length;
@@ -1092,7 +1110,9 @@ function drawMusicF() {
   $('#liveF').hidden = !live; $('#tracksF').hidden = k === 'song';
   $('#tracksL').textContent = live ? 'セットリスト（1行に1曲・順番どおり）' : '曲名（1行に1曲・順番どおり）';
   $('#tstSeg').innerHTML = TST.map(([v, l]) => `<button type="button" data-etst="${v}" class="${draft.tst === v ? 'on' : ''}">${l}</button>`).join('');
-  const g = $('#fEdit').genre.value.trim();
+  const g = $('#fEdit').genre.value.trim(), cl = !live && g === 'クラシック';
+  $('#clF').hidden = !cl; $('#creatorL').textContent = cl ? '作曲家' : CATS.music.creator;
+  if (cl) $('#tracksL').textContent = '曲名・楽章（1行に1つ・順番どおり）';
   $('#genreQuick').innerHTML = uniq('genre', GENRES).map((t) => `<button type="button" class="chip${g === t ? ' on' : ''}" data-genre="${esc(t)}">${esc(t)}</button>`).join('');
   $('#stSeg').closest('.grp').hidden = live;
   $('#mediaSeg').hidden = live; if (live) { $('#appF').hidden = true; $('#whereF').hidden = true; }
@@ -1117,8 +1137,8 @@ function drawTagPick() {
   const have = new Set(curTags()), cnt = new Map();
   for (const x of S.items) for (const t of x.tags) { const c = cnt.get(t) || [0, 0]; c[x.cat === draft.cat ? 0 : 1]++; cnt.set(t, c); }
   for (const t of have) if (!cnt.has(t)) cnt.set(t, [0, 0]);
-  const list = [...cnt].sort((a, b) => b[1][0] - a[1][0] || b[1][1] - a[1][1] || coll.compare(a[0], b[0]));
-  $('#tpList').innerHTML = list.length ? list.map(([t, [a]]) => `<button type="button" class="chip${have.has(t) ? ' on' : ''}" data-tp="${esc(t)}">#${esc(t)}${a ? `<small>${a}</small>` : ''}</button>`).join('') : '<p class="hint">まだタグがない。下でつくると、次からここに出る。</p>';
+  const c1 = new Map([...cnt].map(([t, [a, b]]) => [t, a * 1000 + b]));
+  $('#tpList').innerHTML = c1.size ? groupTags(c1).map(([g, l]) => `${g ? `<h5 class="fgh">${esc(g)}</h5>` : ''}<div class="fchips">${l.map((t) => { const a = cnt.get(t)[0]; return `<button type="button" class="chip${have.has(t) ? ' on' : ''}" data-tp="${esc(t)}">#${esc(t)}${a ? `<small>${a}</small>` : ''}</button>`; }).join('')}</div>`).join('') : '<p class="hint">まだタグがない。下でつくると、次からここに出る。</p>';
 }
 function drawStSeg() {
   const C = CATS[draft.cat];
@@ -1183,7 +1203,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
     place: draft.cat === 'art' ? f.place.value.trim() : '', until: draft.cat === 'art' ? f.until.value : '',
     date: mk === 'live' ? (draft.tst === 'went' ? f.ldate.value : '') : draft.status === 'done' ? readWhen($('#whenUI'), draft) : (draft.date || ''),
     vols, cur: ser && !isM ? (vols ? Math.min(int(f.cur.value), vols) : int(f.cur.value)) : 0, unit: ep ? 'ep' : '',
-    genre: isM ? f.genre.value.trim() : '', ldate: mk === 'live' ? f.ldate.value : '', ltime: mk === 'live' ? f.ltime.value : '', venue: mk === 'live' ? f.venue.value.trim() : '', lseat: mk === 'live' ? f.lseat.value.trim() : '', tst: mk === 'live' ? draft.tst || '' : '',
+    genre: isM ? f.genre.value.trim() : '', perf: isM && mk !== 'live' && f.genre.value.trim() === 'クラシック' ? f.perf.value.trim() : '', ldate: mk === 'live' ? f.ldate.value : '', ltime: mk === 'live' ? f.ltime.value : '', venue: mk === 'live' ? f.venue.value.trim() : '', lseat: mk === 'live' ? f.lseat.value.trim() : '', tst: mk === 'live' ? draft.tst || '' : '',
     gp: mk === 'live' && S.set.money ? int(f.gp.value) : (x && x.gp) || 0, tp: mk === 'live' && S.set.money ? int(f.tp.value) : (x && x.tp) || 0,
     pages, page: book ? (pages ? Math.min(int(f.page.value), pages) : int(f.page.value)) : 0,
     pct: game && !ser && f.pct.value.trim() !== '' ? Math.min(100, int(f.pct.value)) : '',
@@ -1234,7 +1254,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
 /* ===== 棚に選んで入れる ===== */
 let pick = null;
 function showPick(P) {
-  pick = P; $('#pickT').textContent = P.title; $('#pickH').textContent = P.hint; $('#pickQ').value = '';
+  pick = P; P.tab = P.tabs ? P.tabs[0][0] : ''; $('#pickT').textContent = P.title; $('#pickH').textContent = P.hint; $('#pickQ').value = '';
   if (!P.cands().length) { toast('選べる作品がまだない'); pick = null; return; }
   drawPicks(); $('#dPick').showModal();
 }
@@ -1246,32 +1266,56 @@ function openPick() {
 function orderedSel(oldIds, sel) { return oldIds.filter((id) => sel.has(id)).concat([...sel].filter((id) => !oldIds.includes(id))); }
 function openBestPick() {
   const cat = S.cat, y = ui.byear, ys = String(y), old = bestOf(cat, y);
-  const boomed = new Set(Object.keys(S.boom).filter((m) => m.startsWith(ys)).flatMap((m) => S.boom[m]));
+  const boomed = new Set(Object.keys(S.boom).filter((m) => m.startsWith(ys)).flatMap((m) => S.boom[m].map((q) => String(q).split('~')[0])));
   const pri = (x) => (boomed.has(x.id) ? 0 : (x.date || '').startsWith(ys) || (x.ldate || '').startsWith(ys) ? 1 : 2);
   showPick({ title: `${y}年のベスト10を選ぶ`, hint: cat === 'music' ? `${y}年のマイブームに入れたものが上に出る。ほかの作品も選べる。` : `${y}年に${CATS[cat].did}ものが上に出る。ほかの作品も選べる。`, okL: '決める', max: 10, sel: new Set(old), cands: () => itemsOf(cat), pri, sub: (x) => (boomed.has(x.id) ? `${y}年のマイブーム` : pri(x) === 1 ? `${y}年に${CATS[cat].did}` : ''),
     save: (sel) => { (S.best[cat] = S.best[cat] || {})[y] = orderedSel(old, sel); if (!S.best[cat][y].length) delete S.best[cat][y]; } });
 }
 function openBoomPick(m) {
-  const old = boomOf(m);
-  showPick({ title: `${ymText(m)}のマイブーム`, hint: `その月にハマってた曲・アルバムを${BOOM_MAX}つまで。`, okL: '決める', max: BOOM_MAX, sel: new Set(old), cands: () => itemsOf('music').filter((x) => kindOf(x) !== 'live'),
+  const old = boomOf(m), mus = () => itemsOf('music');
+  const ymOf = (t) => { if (!t) return ''; const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
+  const inMon = (x) => { const y = x._alb || x; return [(y.date || '').slice(0, 7), ymOf(y.created)].includes(m); };
+  const kd = (x) => (x._alb ? 'trk' : kindOf(x));
+  showPick({ title: `${ymText(m)}のマイブーム`, hint: `その月にハマってた曲・アルバムを${BOOM_MAX}つまで。アルバムの中の1曲も選べる。アーティストごとに並ぶ。`, okL: '決める', max: BOOM_MAX, sel: new Set(old), grid: true,
+    cands: () => [...mus().filter((x) => kindOf(x) !== 'live'), ...mus().filter((x) => kindOf(x) === 'album').flatMap((x) => Array.from({ length: Math.min(x.vols || 0, 300) }, (_, k) => k + 1).filter((i) => (x.v[i] || {}).t).map((i) => trkItem(x, i)))],
+    tabs: [['all', 'すべて', () => true], ['song', 'シングル', (x) => kd(x) === 'song'], ['album', 'アルバム', (x) => kd(x) === 'album'], ['trk', 'アルバムの曲', (x) => kd(x) === 'trk']],
+    pri: (x) => (inMon(x) ? 0 : 1), group: (x) => (inMon(x) ? `${ymText(m)}に聴いた・足したもの` : x.creator || 'アーティスト未入力'),
+    sub: (x) => (x._alb ? x._alb.title : kindOf(x) === 'album' ? 'アルバム' : ''),
     save: (sel) => { S.boom[m] = orderedSel(old, sel); if (!S.boom[m].length) delete S.boom[m]; } });
 }
 function openLinkPick() {
-  showPick({ title: '関連作品を選ぶ', hint: 'ほかの部屋の作品も選べる（原作・アニメ化・主題歌など）。つなぐと、両方のページに出る。', okL: '決める', sel: new Set(draft.links || []), cands: () => S.items.filter((x) => x.id !== draft.id),
+  showPick({ title: '関連作品を選ぶ', hint: 'ほかの部屋の作品も選べる（原作・アニメ化・主題歌など）。上で部屋を切り替えられる。つなぐと、両方のページに出る。', okL: '決める', sel: new Set(draft.links || []), cands: () => S.items.filter((x) => x.id !== draft.id),
+    tabs: [['all', 'すべて', () => true], ...ORDER.map((c) => [c, CATS[c].name, (x) => x.cat === c])],
     sub: (x) => CATS[x.cat].short || CATS[x.cat].name, keep: true, save: (sel) => { draft.links = [...sel]; drawLinkChips(); } });
 }
+function drawPickTabs(all = pick.cands()) {
+  const P = pick; $('#pickTabs').hidden = !P.tabs; if (!P.tabs) return;
+  $('#pickTabs').innerHTML = P.tabs.map(([k, l, f]) => { const li = all.filter(f), on = li.filter((x) => P.sel.has(x.id)).length; return li.length || k === P.tab ? `<button type="button" class="chip${P.tab === k ? ' on' : ''}" data-ptab="${k}">${esc(l)}<small>${li.length}</small>${on ? `<i class="pdot">${on}</i>` : ''}</button>` : ''; }).join('');
+}
 function drawPicks() {
-  const q = norm($('#pickQ').value), P = pick;
-  const a = P.cands().filter((x) => !q || norm([x.title, x.yomi, x.creator, ...x.tags].join(' ')).includes(q)).sort((x, y) => (P.sel.has(y.id) - P.sel.has(x.id)) || (P.pri ? P.pri(x) - P.pri(y) : 0) || coll.compare(titleKey(x), titleKey(y)));
-  $('#picks').innerHTML = a.length ? a.slice(0, 400).map((x) => { const sb = P.sub ? P.sub(x) : ''; return `<li><label><span class="th${x.cat === 'music' ? ' sq' : ''}">${phHTML(x, { prog: false })}</span><b>${esc(x.title)}${sb ? `<small>${esc(sb)}</small>` : ''}</b><input type="checkbox" data-pk="${esc(x.id)}"${P.sel.has(x.id) ? ' checked' : ''}></label></li>`; }).join('') : '<li class="hint" style="padding:16px 4px">見つからない</li>';
+  const q = norm($('#pickQ').value), P = pick, all = P.cands();
+  const tf = P.tabs ? (P.tabs.find((t) => t[0] === P.tab) || P.tabs[0])[2] : null;
+  drawPickTabs(all);
+  const gk = (x) => (P.sel.has(x.id) ? '' : P.group ? P.group(x) : '');
+  const a = all.filter((x) => (!tf || tf(x)) && (!q || norm([x.title, x.yomi, x.creator, ...x.tags, x._alb ? x._alb.title : ''].join(' ')).includes(q)))
+    .sort((x, y) => (P.sel.has(y.id) - P.sel.has(x.id)) || (P.pri ? P.pri(x) - P.pri(y) : 0) || (P.group ? coll.compare(gk(x), gk(y)) : 0) || coll.compare(titleKey(x), titleKey(y)));
+  let last = null; const out = [];
+  for (const x of a.slice(0, 400)) {
+    if (P.group) { const h = P.sel.has(x.id) ? '選んでるもの' : P.group(x); if (h !== last) { out.push(`<li class="pgh">${esc(h)}</li>`); last = h; } }
+    const sb = P.sub ? P.sub(x) : '', ph = x._alb ? trkPh(x._alb, x._n) : phHTML(x, { prog: false });
+    out.push(`<li><label><span class="th${x.cat === 'music' ? ' sq' : ''}">${ph}</span><b>${esc(x.title)}${sb ? `<small>${esc(sb)}</small>` : ''}</b><input type="checkbox" data-pk="${esc(x.id)}"${P.sel.has(x.id) ? ' checked' : ''}></label></li>`);
+  }
+  $('#picks').className = 'picks' + (P.grid ? ' grid' : '');
+  $('#picks').innerHTML = out.length ? out.join('') : '<li class="hint" style="padding:16px 4px">見つからない</li>';
   $('#pickOk').textContent = okText();
   hydrate($('#picks'));
 }
+$('#pickTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-ptab]'); if (!b || !pick) return; pick.tab = b.dataset.ptab; drawPicks(); $('#picks').scrollTop = 0; });
 $('#pickQ').addEventListener('input', drawPicks);
 $('#picks').addEventListener('change', (e) => {
   const c = e.target.closest('[data-pk]'); if (!c || !pick) return;
   if (c.checked) { if (pick.max && pick.sel.size >= pick.max) { c.checked = false; toast(`${pick.max}個まで。どれかを外してね`); return; } pick.sel.add(c.dataset.pk); } else pick.sel.delete(c.dataset.pk);
-  $('#pickOk').textContent = okText();
+  $('#pickOk').textContent = okText(); drawPickTabs();
 });
 function pickDone() {
   const P = pick; if (!P) return;
@@ -1388,6 +1432,29 @@ function drawMoney() {
   void wish; $('#mnyAll').textContent = (every !== tot ? `全部の部屋の合計は ${yen(every)}。年ごと・部屋ごとは設定から見られる。` : '');
 }
 
+/* ===== タグのグループ ===== */
+const TG = () => S.tagGroups;
+const groupOf = (t) => TG().findIndex((g) => g.tags.includes(t));
+/* [グループ名, [タグ…]] の並び。グループに入ってないタグは「その他」（数が多い順） */
+function groupTags(cnt) {
+  const out = [], used = new Set();
+  for (const g of TG()) { const l = g.tags.filter((t) => cnt.has(t)); l.forEach((t) => used.add(t)); if (l.length) out.push([g.name, l]); }
+  const rest = [...cnt.keys()].filter((t) => !used.has(t)).sort((a, b) => cnt.get(b) - cnt.get(a) || coll.compare(a, b));
+  if (rest.length) out.push([out.length ? 'その他' : '', rest]);
+  return out;
+}
+function allTagCounts() { const m = new Map(); for (const x of S.items) for (const t of x.tags) m.set(t, (m.get(t) || 0) + 1); return m; }
+function drawTagG() {
+  const cnt = allTagCounts(), gs = TG();
+  const opts = (sel) => `<option value="-1"${sel < 0 ? ' selected' : ''}>その他</option>` + gs.map((g, i) => `<option value="${i}"${sel === i ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
+  const row = (t, gi, ti, len) => `<div class="tgrow"><div class="tgr1"><b>#${esc(t)}<small>${cnt.get(t) || 0}</small></b><button class="lnk" data-tren="${esc(t)}">名前</button><button class="lnk dan" data-tdel="${esc(t)}">消す</button></div><div class="tgr2"><label class="tgsel">グループ<select data-tsel="${esc(t)}">${opts(gi)}</select></label>${gi >= 0 ? `<span class="mv"><button data-tmv="-1" data-gi="${gi}" data-ti="${ti}"${ti === 0 ? ' disabled' : ''} aria-label="上へ">↑</button><button data-tmv="1" data-gi="${gi}" data-ti="${ti}"${ti === len - 1 ? ' disabled' : ''} aria-label="下へ">↓</button></span>` : ''}</div></div>`;
+  const used = new Set(gs.flatMap((g) => g.tags));
+  const rest = [...cnt.keys()].filter((t) => !used.has(t)).sort((a, b) => cnt.get(b) - cnt.get(a) || coll.compare(a, b));
+  $('#tgBody').innerHTML = gs.map((g, gi) => { const l = g.tags.filter((t) => cnt.has(t)); return `<section class="tgg"><div class="tggh"><b>${esc(g.name)}</b><span class="mv"><button data-gmv="-1" data-gi="${gi}"${gi === 0 ? ' disabled' : ''} aria-label="グループを上へ">↑</button><button data-gmv="1" data-gi="${gi}"${gi === gs.length - 1 ? ' disabled' : ''} aria-label="グループを下へ">↓</button></span><button class="lnk" data-gren="${gi}">名前</button><button class="lnk dan" data-gdel="${gi}">消す</button></div>${l.length ? l.map((t, ti) => row(t, gi, ti, l.length)).join('') : '<p class="hint">まだ空っぽ。下の「その他」のタグを、グループの欄で選ぶとここに移る。</p>'}</section>`; }).join('') +
+    `<section class="tgg"><div class="tggh"><b>${gs.length ? 'その他（グループなし）' : 'タグ'}</b></div>${rest.length ? rest.map((t) => row(t, -1, 0, 0)).join('') : `<p class="hint">${cnt.size ? '全部どこかのグループに入ってる。' : 'まだタグがない。'}</p>`}</section>`;
+}
+const tagChanged = () => { save(); render(); if ($('#dTagG').open) drawTagG(); if ($('#dFilt').open) openFilt(); };
+
 /* ===== タグ・ジャンルで絞り込む ===== */
 function fLabel(F = ui.F) {
   const names = { tag: 'タグ', sh: '棚' }; for (const [k, l] of FKEYS(S.cat)) names[k] = l;
@@ -1403,10 +1470,11 @@ function openFilt() {
   $('#fltT').textContent = '絞り込み・棚';
   const shs = shelvesOf(S.cat), sb = base('sh');
   const shSec = `<div class="fhrow"><h4 class="fh">棚</h4><button class="lnk" data-act="newshelf">＋ 新しい棚</button></div>` + (shs.length ? `<div class="fchips">${shs.map((h) => `<button class="chip shf${isOn('sh', h.id) ? ' on' : ''}" data-ff="sh" data-fv="${esc(h.id)}">${esc(h.name)}<small>${sb.filter((x) => x.sh.includes(h.id)).length}</small></button>`).join('')}</div>` : '<p class="hint">まだ棚がない。「殿堂入り」みたいに、自分で好きな棚をつくれる。</p>');
-  const tagSec = `<div class="fhrow"><h4 class="fh">タグ</h4>${tc.size ? `<button class="lnk" data-act="tagedit">${ui.tagEdit ? '終わる' : '名前を変える・消す'}</button>` : ''}</div>` +
-    (!tc.size ? '<p class="hint">まだタグがない。作品の「編集」→「タグを選ぶ・つくる」で付けると、ここに出る。</p>'
-      : ui.tagEdit ? `<div class="trows">${sorted(tc).map(([t, c]) => `<div class="trow"><span>#${esc(t)}<small>${c}</small></span><button class="btn sm" data-tren="${esc(t)}">名前を変える</button><button class="btn sm dan" data-tdel="${esc(t)}">消す</button></div>`).join('')}</div>`
-      : `<div class="fchips">${sorted(tc).filter(([t, c]) => c || isOn('tag', t)).map(([t, c]) => `<button class="chip${isOn('tag', t) ? ' on' : ''}" data-ff="tag" data-fv="${esc(t)}">#${esc(t)}<small>${c}</small></button>`).join('')}</div>`);
+  void sorted;
+  const tcv = new Map([...tc].filter(([t, c]) => c || isOn('tag', t)));
+  const tagSec = `<div class="fhrow"><h4 class="fh">タグ</h4>${allTagCounts().size ? '<button class="lnk" data-act="tagorg">グループ分け・名前・並び順</button>' : ''}</div>` +
+    (!tcv.size ? '<p class="hint">まだタグがない。作品の「編集」→「タグを選ぶ・つくる」で付けると、ここに出る。</p>'
+      : groupTags(tcv).map(([g, l]) => `${g ? `<h5 class="fgh">${esc(g)}</h5>` : ''}<div class="fchips">${l.map((t) => `<button class="chip${isOn('tag', t) ? ' on' : ''}" data-ff="tag" data-fv="${esc(t)}">#${esc(t)}<small>${tcv.get(t)}</small></button>`).join('')}</div>`).join(''));
   const secs = FKEYS(S.cat).map(([k, l]) => { const m = new Map(); for (const x of base(k)) if (x[k]) m.set(x[k], (m.get(x[k]) || 0) + 1); for (const v of Ft[k] || []) if (!m.has(v)) m.set(v, 0); return m.size ? `<h4 class="fh">${esc(l)}別</h4><div class="fchips">${sorted(m).map(([v, c]) => `<button class="chip${isOn(k, v) ? ' on' : ''}" data-ff="${k}" data-fv="${esc(v)}">${esc(v)}<small>${c}</small></button>`).join('')}</div>` : ''; }).join('');
   $('#fltB').innerHTML = (fOn(Ft) ? `<p class="fsel"><span>${esc(fLabel(Ft))}</span><button class="lnk" data-act="fltreset">全部外す</button></p>` : '') + shSec + tagSec + secs;
   $('#fltGo').textContent = `絞り込む（${all.filter((x) => matchF(x, Ft)).length}${CATS[S.cat].unit}）`;
@@ -1415,13 +1483,13 @@ function openFilt() {
 
 /* ===== アーティストのまとめ ===== */
 function openArtist(name) {
-  const k = norm(name), a = S.items.filter((x) => x.cat === 'music' && norm(x.creator) === k);
+  const k = norm(name), a = S.items.filter((x) => x.cat === 'music' && (norm(x.creator) === k || (x.perf && norm(x.perf) === k)));
   const al = a.filter((x) => kindOf(x) === 'album'), so = a.filter((x) => kindOf(x) === 'song'), lv = a.filter((x) => kindOf(x) === 'live').sort((p, q) => (q.ldate || '').localeCompare(p.ldate || ''));
   const went = lv.filter((x) => x.tst === 'went').sort((p, q) => (p.ldate || '9').localeCompare(q.ldate || '9'));
   const rated = a.filter((x) => kindOf(x) !== 'live' && rt(x) > 0), avg = rated.length ? (rated.reduce((s2, x) => s2 + rt(x), 0) / rated.length).toFixed(1) : '';
   $('#arT').textContent = name;
-  $('#arS').innerHTML = `<div class="stat"><span>アルバム<b class="num">${al.length}</b></span><span>曲<b class="num">${so.length}</b></span><span>ライブ<b class="num">${went.length}</b>回</span>${avg ? `<span>平均<b class="num">${avg}</b></span>` : ''}</div>` + (went.length ? `<p class="hint" style="margin-top:6px">初参戦：${esc(fmtWhen(went[0].ldate))}${went[0].venue ? `　${esc(went[0].venue)}` : ''}${went.length > 1 ? `　／　最近：${esc(fmtWhen(went[went.length - 1].ldate))}` : ''}</p>` : '');
-  $('#arL').innerHTML = [['アルバム', al], ['曲', so], ['ライブ', lv]].filter(([, l]) => l.length).map(([t, l]) => `<h4 class="arh">${t}</h4><div class="links">${l.map(linkCard).join('')}</div>`).join('');
+  $('#arS').innerHTML = `<div class="stat"><span>アルバム<b class="num">${al.length}</b></span><span>シングル<b class="num">${so.length}</b></span><span>ライブ<b class="num">${went.length}</b>回</span>${avg ? `<span>平均<b class="num">${avg}</b></span>` : ''}</div>` + (went.length ? `<p class="hint" style="margin-top:6px">初参戦：${esc(fmtWhen(went[0].ldate))}${went[0].venue ? `　${esc(went[0].venue)}` : ''}${went.length > 1 ? `　／　最近：${esc(fmtWhen(went[went.length - 1].ldate))}` : ''}</p>` : '');
+  $('#arL').innerHTML = [['アルバム', al], ['シングル', so], ['ライブ', lv]].filter(([, l]) => l.length).map(([t, l]) => `<h4 class="arh">${t}</h4><div class="links">${l.map(linkCard).join('')}</div>`).join('');
   hydrate($('#arL')); $('#dArtist').showModal();
 }
 /* ===== 再評価 ===== */
@@ -1519,7 +1587,7 @@ async function doImport(all) {
 /* ===== 操作 ===== */
 document.addEventListener('click', (e) => {
   const t = e.target;
-  const dk = t.closest('.dk'); if (dk) { if (dk.dataset.cat !== S.cat) { S.cat = dk.dataset.cat; ui.filter = 'all'; ui.media = ''; ui.F = {}; ui.open.clear(); ui.q = ''; ui.tag = ''; ui.tagOpen = false; ui.kind = ''; ui.genre = ''; ui.genreOpen = false; $('#q').value = ''; save(); scrollTo({ top: 0 }); render(); } return; }
+  const dk = t.closest('.dk'); if (dk) { if (dk.dataset.cat !== S.cat) { S.cat = dk.dataset.cat; ui.filter = 'all'; ui.media = ''; ui.F = {}; ui.q = ''; ui.tag = ''; ui.tagOpen = false; ui.kind = ''; ui.genre = ''; ui.genreOpen = false; $('#q').value = ''; save(); scrollTo({ top: 0 }); render(); } return; }
   const fl = t.closest('[data-filter]'); if (fl) { ui.filter = fl.dataset.filter; render(); return; }
   const gf = t.closest('[data-genref]'); if (gf) { ui.genre = ui.genre === gf.dataset.genref ? '' : gf.dataset.genref; render(); return; }
   const go = t.closest('[data-goid]'); if (go) { $$('dialog[open]').forEach((d) => d.close()); openItem(go.dataset.goid, null); return; }
@@ -1536,12 +1604,21 @@ document.addEventListener('click', (e) => {
     const old = tren.dataset.tren, nw = (prompt(`タグ「${old}」の新しい名前\n（全部の部屋の作品で変わる。同じ名前のタグがあれば1つにまとまる）`, old) || '').replace(/^#/, '').trim().slice(0, 20);
     if (!nw || nw === old) return;
     let n = 0; for (const x of S.items) if (x.tags.includes(old)) { x.tags = [...new Set(x.tags.map((q) => (q === old ? nw : q)))]; n++; }
-    for (const F of [ui.F, ui.Ft]) if (F && F.tag) F.tag = [...new Set(F.tag.map((q) => (q === old ? nw : q)))]; save(); render(); openFilt(); toast(`${n}作品のタグを「${nw}」にした`); return;
+    const gNew = groupOf(nw); for (const g of TG()) g.tags = gNew >= 0 ? g.tags.filter((q) => q !== old) : [...new Set(g.tags.map((q) => (q === old ? nw : q)))];
+    for (const F of [ui.F, ui.Ft]) if (F && F.tag) F.tag = [...new Set(F.tag.map((q) => (q === old ? nw : q)))]; tagChanged(); toast(`${n}作品のタグを「${nw}」にした`); return;
   }
+  const gmv = t.closest('[data-gmv]'); if (gmv) { const i = +gmv.dataset.gi, j = i + +gmv.dataset.gmv, g = TG(); if (j < 0 || j >= g.length) return; [g[i], g[j]] = [g[j], g[i]]; tagChanged(); return; }
+  const tmv = t.closest('[data-tmv]'); if (tmv) {
+    const g = TG()[+tmv.dataset.gi]; if (!g) return; const cnt = allTagCounts(), vis = g.tags.filter((q) => cnt.has(q)), i = +tmv.dataset.ti, j = i + +tmv.dataset.tmv; if (j < 0 || j >= vis.length) return;
+    [vis[i], vis[j]] = [vis[j], vis[i]]; g.tags = vis.concat(g.tags.filter((q) => !cnt.has(q))); tagChanged(); return;
+  }
+  const gren = t.closest('[data-gren]'); if (gren) { const g = TG()[+gren.dataset.gi]; const nm = (prompt('グループの新しい名前', g.name) || '').trim().slice(0, 16); if (nm) { g.name = nm; tagChanged(); } return; }
+  const gdel = t.closest('[data-gdel]'); if (gdel) { const g = TG()[+gdel.dataset.gi]; if (confirm(`グループ「${g.name}」を消す？\n中のタグは「その他」に戻る（タグは消えない）。`)) { S.tagGroups = TG().filter((q) => q !== g); tagChanged(); } return; }
   const tdel = t.closest('[data-tdel]'); if (tdel) {
     const old = tdel.dataset.tdel; if (!confirm(`タグ「${old}」を全部の作品から外す？\n作品は消えないよ。`)) return;
     let n = 0; for (const x of S.items) if (x.tags.includes(old)) { x.tags = x.tags.filter((q) => q !== old); n++; }
-    for (const F of [ui.F, ui.Ft]) if (F && F.tag) F.tag = F.tag.filter((q) => q !== old); save(); render(); openFilt(); toast(`${n}作品から「${old}」を外した`); return;
+    for (const g of TG()) g.tags = g.tags.filter((q) => q !== old);
+    for (const F of [ui.F, ui.Ft]) if (F && F.tag) F.tag = F.tag.filter((q) => q !== old); tagChanged(); toast(`${n}作品から「${old}」を外した`); return;
   }
   const mf = t.closest('[data-mediaf]'); if (mf) { ui.media = ui.media === mf.dataset.mediaf ? '' : mf.dataset.mediaf; render(); return; }
   const tf = t.closest('[data-tagf]'); if (tf) { ui.tag = ui.tag === tf.dataset.tagf ? '' : tf.dataset.tagf; render(); return; }
@@ -1564,10 +1641,10 @@ document.addEventListener('click', (e) => {
   const mi = t.closest('[data-mid]'); if (mi) { $('#dMoney').close(); openItem(mi.dataset.mid, null); return; }
   const tw = t.closest('[data-tid]'); if (tw) { $('#dTower').close(); openItem(tw.dataset.tid, null); return; }
   const tws = t.closest('[data-tow]'); if (tws) { ui.tow = tws.dataset.tow; drawTower(); return; }
-  const xo = t.closest('[data-xopen]'); if (xo) { const id = xo.dataset.xopen; if (ui.open.has(id)) ui.open.delete(id); else ui.open.add(id); drawList(); return; }
+  const xo = t.closest('[data-xopen]'); if (xo) { togOpen(xo.dataset.xopen); return; }
   const kid = t.closest('[data-kid]'); if (kid) { const it = findItem(kid.dataset.kid); if (it) openVol(it, +kid.dataset.kn); return; }
   const card = t.closest('#list [data-id]');
-  if (card && card.dataset.kids) { const id = card.dataset.id; if (ui.open.has(id)) ui.open.delete(id); else ui.open.add(id); drawList(); return; }
+  if (card && card.dataset.kids) { togOpen(card.dataset.id); return; }
   if (card) {
     if (card.classList.contains('spine') && !reduced) { card.classList.add('out'); setTimeout(() => { card.classList.remove('out'); openItem(card.dataset.id, card); }, 260); }
     else if (card.classList.contains('tk') && !reduced) { card.classList.add('tear'); setTimeout(() => { card.classList.remove('tear'); openItem(card.dataset.id, null); }, 300); }
@@ -1663,7 +1740,8 @@ document.addEventListener('click', (e) => {
     case 'fltclear': ui.F = {}; if ($('#dFilt').open) $('#dFilt').close(); render(); break;
     case 'fltreset': ui.Ft = {}; openFilt(); break;
     case 'fltgo': ui.F = ui.Ft || {}; ui.Ft = null; $('#dFilt').close(); ui.filter = ui.filter === 'next' ? 'all' : ui.filter; render(); scrollTo({ top: 0 }); break;
-    case 'tagedit': ui.tagEdit = !ui.tagEdit; openFilt(); break;
+    case 'tagorg': drawTagG(); $('#dTagG').showModal(); break;
+    case 'gnew': { const nm = (prompt('新しいグループの名前（例：ジャンル・俳優・気分）') || '').trim().slice(0, 16); if (!nm) break; if (TG().some((g) => g.name === nm)) { toast('同じ名前のグループがもうある'); break; } TG().push({ id: uid(), name: nm, tags: [] }); tagChanged(); toast(`グループ「${nm}」をつくった`); break; }
     case 'kidadd': { const it = findItem(a.dataset.kadd); if (!it) break; it.series = true; it.vols = (it.vols || 0) + 1; touch(it); drawList(); openVol(it, it.vols); setTimeout(() => $('#volTitle').focus(), 350); break; }
     case 'adv': ui.adv = true; $('#fEdit').classList.add('advOpen'); $('#advB').hidden = true; break;
     case 'rateclear': if (x) { x.rating = 0; x.rateFix = false; logEv(x, 'rate', 0); touch(x); drawRate(x); drawTl(x); } break;
@@ -1750,7 +1828,7 @@ document.addEventListener('click', (e) => {
         S.items = S.items.filter((i) => i !== it); for (const k of imgKeys(it)) { idb.del(k).catch(() => {}); forget(k); }
         for (const o of S.items) if (o.links.includes(it.id)) o.links = o.links.filter((q) => q !== it.id);
         for (const ys of Object.values(S.best)) for (const y of Object.keys(ys)) ys[y] = ys[y].filter((q) => q !== it.id);
-        for (const m of Object.keys(S.boom)) S.boom[m] = S.boom[m].filter((q) => q !== it.id);
+        for (const m of Object.keys(S.boom)) S.boom[m] = S.boom[m].filter((q) => q !== it.id && !String(q).startsWith(it.id + '~'));
         save(); $('#dEdit').close(); if (curId === it.id) { $('#page').hidden = true; document.body.classList.remove('paged'); curId = null; } render(); toast('消した');
       }
       break;
@@ -1781,6 +1859,13 @@ document.addEventListener('change', (e) => {
   touch(x); drawSt(x); drawTl(x);
 });
 $('#serSw').addEventListener('click', () => { draft.series = !draft.series; setSw('#serSw', draft.series); $('#serF').hidden = !draft.series; drawProgF(); drawEditRate(); drawRelL(); });
+document.addEventListener('change', (e) => {
+  const sel = e.target.closest('[data-tsel]'); if (!sel) return;
+  const tg = sel.dataset.tsel, to = +sel.value;
+  for (const g of TG()) g.tags = g.tags.filter((q) => q !== tg);
+  if (to >= 0 && TG()[to]) TG()[to].tags.push(tg);
+  tagChanged();
+});
 $('#tpNew').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('[data-act="tpadd"]').click(); } });
 $('#fEdit').genre.addEventListener('input', () => drawMusicF());
 $('#doneSw').addEventListener('click', () => { draft.done = !draft.done; setSw('#doneSw', draft.done); });
@@ -1800,6 +1885,15 @@ $('#imp').addEventListener('change', (e) => { if (e.target.files[0]) readImport(
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#page').hidden && !$('dialog[open]')) closeItem(); });
 // 背景の大きな文字をスクロールに合わせてゆっくり動かす
 let ticking = false;
+/* iPhone（iOS 26）で、画面の見えている範囲と下の基準がずれて下の固定バーが欠けることがある。そのずれ分だけ持ち上げる（キーボードが出ているときは何もしない） */
+(() => {
+  const vv = window.visualViewport; if (!vv) return;
+  let raf = 0;
+  const fix = () => { raf = 0; const gap = Math.round(innerHeight - vv.height - vv.offsetTop), kb = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    document.documentElement.style.setProperty('--vvb', `${vv.scale > 1.01 || kb || gap < 0 || gap > 140 ? 0 : gap}px`); };
+  const q = () => { if (!raf) raf = requestAnimationFrame(fix); };
+  vv.addEventListener('resize', q); vv.addEventListener('scroll', q); addEventListener('scroll', q, { passive: true }); addEventListener('focusout', () => setTimeout(q, 350)); fix();
+})();
 addEventListener('scroll', () => { if (!ticking && !reduced) { ticking = true; requestAnimationFrame(() => { $('#giant').style.transform = `translateY(${(-scrollY * 0.18).toFixed(1)}px)`; ticking = false; }); } }, { passive: true });
 setInterval(applyNight, 60000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { applyNight(); drawBkHint(); } });

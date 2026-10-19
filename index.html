@@ -80,6 +80,7 @@
   <div id="musicF">
     <label class="f">ジャンル<input name="genre" list="genreList" autocomplete="off" maxlength="30" placeholder="例：邦楽"></label>
     <div class="tagpick" id="genreQuick" style="margin-top:6px"></div>
+    <div id="clF" hidden style="margin-top:8px"><label class="f">演奏者（指揮者・オーケストラ・ソリストなど）<input name="perf" list="perfList" autocomplete="off" maxlength="120" placeholder="例：カラヤン／ベルリン・フィル"></label><div class="tagpick qpick" data-q="perf" style="margin-top:6px"></div><p class="hint" style="margin:6px 2px 0">クラシックのときだけ出る欄。上の欄は「作曲家」になる。演奏者でも絞り込めるし、名前を押すとその人の録音がまとめて見られる。</p></div>
     <div id="liveF">
       <div class="r2" style="margin-top:6px"><label class="f">ライブの日<input name="ldate" type="date"></label><label class="f">開演<input name="ltime" type="time"></label></div>
       <span class="hint">チケット</span><div class="seg sm" id="tstSeg" style="margin:6px 0 10px"></div>
@@ -161,7 +162,7 @@
 
   <button type="button" class="btn sm advb" id="advB" data-act="adv">もっと詳しく（よみがな・持ち方・値段・感想・メモなど）▾</button>
   <label class="f adv">感想<textarea name="review" maxlength="5000" placeholder="思ったこと"></textarea></label>
-  <label class="f adv">メモ<input name="memo" autocomplete="off" maxlength="300" placeholder="例：友だちのおすすめ"></label>
+  <label class="f adv">メモ（URLを貼ると、作品のページで押せるリンクになる）<input name="memo" autocomplete="off" maxlength="600" placeholder="例：友だちのおすすめ　https://…"></label>
   <div class="tagbox adv">
     <div class="tagrow"><span class="hint">関連作品（原作・アニメ化・主題歌など）</span><button type="button" class="tagopen" data-act="linkpick">＋ 選ぶ</button></div>
     <div class="tagpick" id="linkChips"></div>
@@ -174,7 +175,7 @@
   <div class="acts"><button type="button" class="btn dan" id="delBtn" data-act="delete">消す</button><button type="button" class="btn" data-act="close">やめる</button><button class="btn pri" value="ok">保存</button></div>
 </form></dialog>
 <datalist id="pfList"><option value="Switch"><option value="Switch 2"><option value="PS5"><option value="PS4"><option value="Xbox"><option value="PC（Steam）"><option value="スマホ"><option value="レトロ"></datalist>
-<datalist id="genreList"></datalist><datalist id="crList"></datalist><datalist id="venueList"></datalist><datalist id="appList"></datalist><datalist id="svcList"></datalist><datalist id="whereList"></datalist><datalist id="thList"></datalist>
+<datalist id="genreList"></datalist><datalist id="perfList"></datalist><datalist id="crList"></datalist><datalist id="venueList"></datalist><datalist id="appList"></datalist><datalist id="svcList"></datalist><datalist id="whereList"></datalist><datalist id="thList"></datalist>
 
 <!-- 巻ごと -->
 <dialog id="dVol"><div class="sh">
@@ -217,6 +218,7 @@
 <dialog id="dPick"><div class="sh">
   <h3 id="pickT"></h3>
   <p class="hint" id="pickH"></p>
+  <div class="ptabs" id="pickTabs" hidden></div>
   <input class="search" id="pickQ" type="search" placeholder="さがす" autocomplete="off" style="padding-left:14px">
   <ul class="picks" id="picks"></ul>
   <div class="acts"><button type="button" class="btn" data-act="close">やめる</button><button type="button" class="btn pri" data-act="pickok" id="pickOk">入れる</button></div>
@@ -275,6 +277,15 @@
   <h3 id="fltT">タグで絞り込む</h3>
   <div id="fltB"></div>
   <div class="acts fltacts"><button type="button" class="btn" data-act="close">閉じる</button><button type="button" class="btn pri" data-act="fltgo" id="fltGo">絞り込む</button></div>
+</div></dialog>
+
+<!-- タグの整理 -->
+<dialog id="dTagG"><div class="sh">
+  <h3>タグの整理</h3>
+  <p class="hint">グループ（ジャンル・俳優・気分など）に分けると、絞り込みやタグを選ぶときにグループごとに並ぶ。↑↓で順番を変えられる。タグは全部の部屋で共通。</p>
+  <div id="tgBody"></div>
+  <button type="button" class="btn sm" data-act="gnew">＋ グループをつくる</button>
+  <button type="button" class="btn pri" data-act="close">閉じる</button>
 </div></dialog>
 
 <!-- タグを選ぶ（追加・編集） -->

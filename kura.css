@@ -23,7 +23,7 @@ body.night[data-cat="music"]{--room:#141418;--room2:#0e0e11}
 body.night[data-cat="art"]{--room:#272521;--room2:#1e1d1a;--ink:#f1eee6;--sub:#b3ada0;--acc:#93a6ff;--accInk:#14183a;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#171613;--glow:rgba(147,166,255,.14);color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
+html{overscroll-behavior-y:none;-webkit-text-size-adjust:100%}
 body{margin:0;background:radial-gradient(ellipse 90% 45% at 50% 0%,var(--lamp),transparent 70%) fixed,var(--room);color:var(--ink);font:15px/1.65 var(--gothic);font-feature-settings:"palt";min-height:100dvh;overflow-x:hidden;transition:background-color .6s var(--ease),color .4s}
 body.paged{overflow:hidden}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -305,7 +305,7 @@ body.night .fr::before{content:"";position:absolute;left:-10%;right:-10%;top:-30
 .st i::before{content:"★"}
 
 /* ===== 下の固定バー ===== */
-.dock{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 12px);z-index:30;transform:translateX(-50%);width:min(600px,calc(100% - 16px));height:66px;padding:6px;display:grid;grid-template-columns:repeat(6,1fr);
+.dock{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 12px + var(--vvb,0px));z-index:30;transform:translateX(-50%);width:min(600px,calc(100% - 16px));height:66px;padding:6px;display:grid;grid-template-columns:repeat(6,1fr);
   border-radius:24px;background:color-mix(in srgb,var(--room2) 82%,transparent);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);border:1px solid var(--line);box-shadow:0 18px 40px -16px rgba(0,0,0,.55);transition:background-color .6s var(--ease)}
 .dock .ind{position:absolute;top:6px;left:6px;height:54px;width:calc((100% - 12px) / 6);border-radius:18px;background:var(--acc);transition:transform .55s var(--spring),background-color .6s}
 .dk{position:relative;display:grid;place-items:center;align-content:center;gap:3px;color:var(--sub);transition:color .35s;min-width:0}
@@ -314,7 +314,7 @@ body.night .fr::before{content:"";position:absolute;left:-10%;right:-10%;top:-30
 .dk.on{color:var(--accInk)}
 .dk.on svg{transform:translateY(-2px) scale(1.12)}
 .dk:active svg{transform:scale(.85)}
-.fab{position:fixed;right:max(16px,calc(50% - 290px));bottom:calc(env(safe-area-inset-bottom) + 92px);z-index:31;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:var(--accInk);box-shadow:0 14px 28px -10px rgba(0,0,0,.6),0 0 0 6px var(--glow);transition:transform .35s var(--spring),background-color .6s}
+.fab{position:fixed;right:max(16px,calc(50% - 290px));bottom:calc(env(safe-area-inset-bottom) + 92px + var(--vvb,0px));z-index:31;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:var(--acc);color:var(--accInk);box-shadow:0 14px 28px -10px rgba(0,0,0,.6),0 0 0 6px var(--glow);transition:transform .35s var(--spring),background-color .6s}
 .fab:active{transform:scale(.88) rotate(90deg)}
 
 /* ===== 部屋に入ったとき・表示を変えたときだけ動く ===== */
@@ -735,3 +735,54 @@ input::-webkit-date-and-time-value{text-align:left}
 .kidsli{list-style:none;padding:8px 0}
 .jk.open .sl{outline:2px solid var(--acc);outline-offset:2px}
 .tracks .th.sq{flex:none;width:34px;height:34px;margin:0}
+
+/* ===== v13 タグのグループ ===== */
+.fgh{flex:0 0 100%;width:100%;margin:10px 2px 6px;font:700 11.5px/1 var(--gothic);color:var(--acc);letter-spacing:.04em}
+#tpList .fchips{flex:0 0 100%}
+#tpList .fgh:first-child,#fltB .fhrow + .fgh{margin-top:2px}
+.tgg{padding:10px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.tgg + .tgg{margin-top:2px}
+.tggh{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.tggh b{flex:1;min-width:0;font:600 16px/1.3 var(--mincho)}
+.tgrow{padding:8px 0;border-top:1px solid var(--line)}
+.tgr1{display:flex;align-items:center;gap:12px}
+.tgr1 b{flex:1;min-width:0;font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tgr1 b small{margin-left:6px;font-weight:400;font-size:12px;color:var(--sub)}
+.tgr2{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px}
+.tgsel{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--sub)}
+.tgsel select{height:34px;max-width:150px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--field);color:var(--ink);font-size:13.5px}
+.tgsel select option{color:#222}
+.tgg .mv,.tggh .mv{display:flex;gap:4px}
+.tgg .mv button{width:36px;height:32px;border-radius:16px;border:1px solid var(--line);font-size:13px}
+.tgg .mv button:disabled{opacity:.25}
+.lnk.dan{color:#ff8a80}
+body[data-cat="art"]:not(.night) .lnk.dan{color:#b3261e}
+
+/* ===== v14 アルバムの中の曲をシングルと同じ形で ===== */
+.kids.trk{padding:12px 8px 10px;background:color-mix(in srgb,var(--acc) 7%,var(--card));border-color:color-mix(in srgb,var(--acc) 35%,var(--line))}
+.kids.trk .discs{grid-template-columns:repeat(auto-fill,minmax(94px,1fr));gap:18px 12px}
+.kids.trk .covers{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:18px 12px}
+.kids.trk .rows{margin:0}
+.kids.trk .kfoot{flex-wrap:wrap;margin-top:12px;padding:0 4px}
+/* CDは銀の円盤、レコードは黒い盤。シングルは小さめ（CD 8cm／7インチ） */
+.jk.cd .rec{background:radial-gradient(circle,#9aa0a8 0 14%,transparent 14.5% 21%,rgba(255,255,255,.35) 21.5% 22.5%,transparent 23%),conic-gradient(from 20deg,#d7dbe0,#f3f0e6,#c6e2ec,#e6d4ee,#f0eed6,#cbe6d9,#dcd6ea,#d7dbe0);-webkit-mask:radial-gradient(circle,transparent 0 7%,#000 7.5%);mask:radial-gradient(circle,transparent 0 7%,#000 7.5%)}
+.jk.cd .rec::after{background:conic-gradient(from 60deg,transparent 0 8%,rgba(255,255,255,.55) 12%,transparent 18% 55%,rgba(255,255,255,.4) 60%,transparent 66%)}
+.jk.single.cd .rec{height:66%;top:17%}
+
+/* ===== v14 選ぶ画面：部屋・種類のタブ、ジャケットで並べる ===== */
+.ptabs{display:flex;gap:7px;overflow-x:auto;margin:-4px -18px 0;padding:2px 18px 4px;scrollbar-width:none}
+.ptabs::-webkit-scrollbar{display:none}
+.ptabs .chip{flex:none;position:relative}
+.pdot{position:absolute;top:-5px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--acc);color:var(--accInk);font:700 10.5px/17px var(--gothic);font-style:normal;text-align:center}
+.picks .pgh{list-style:none;margin:14px 2px 6px;font:700 11.5px/1.2 var(--gothic);color:var(--acc);letter-spacing:.03em}
+.picks .pgh:first-child{margin-top:2px}
+.picks.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(74px,1fr));gap:12px 9px;align-content:start}
+.picks.grid .pgh,.picks.grid .hint{grid-column:1/-1}
+.picks.grid label{position:relative;flex-direction:column;align-items:stretch;gap:5px;padding:0;border:0}
+.picks.grid .th,.picks.grid .th.sq{width:100%;height:auto;aspect-ratio:1;border-radius:4px}
+.picks.grid input{position:absolute;top:5px;right:5px;width:20px;height:20px}
+.picks.grid label:has(input:checked) .th{outline:2.5px solid var(--acc);outline-offset:2px}
+.picks.grid b{font-size:12px;line-height:1.3;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.picks.grid b small{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.g-music.cd i{background:radial-gradient(circle,rgba(255,255,255,.95) 0 8%,rgba(150,156,165,.9) 8.5% 15%,transparent 15.5%),conic-gradient(from 20deg,#d3d8de,#f3f0e6,#c3e0eb,#e4d1ec,#efedd3,#c8e4d6,#d9d3e8,#d3d8de);box-shadow:inset 0 0 0 .6cqw rgba(255,255,255,.5)}
+.ulink{color:var(--acc);text-decoration:underline;text-underline-offset:2px;word-break:break-all}
