@@ -10,6 +10,7 @@ body[data-cat="anime"]{--room:#0f3d4a;--room2:#0a2d37;--ink:#eef7f8;--sub:#9cc4c
 body[data-cat="movie"]{--room:#3d0c18;--room2:#2b0711;--ink:#f8ecea;--sub:#d6a3ab;--acc:#f6c25b;--accInk:#2a0a12;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#1f040b;--glow:rgba(246,194,91,.16);color-scheme:dark}
 body[data-cat="book"]{--room:#143c2f;--room2:#0e2c22;--ink:#eef4ee;--sub:#9ec1b1;--acc:#f4a48c;--accInk:#2a1410;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#0a2219;--glow:rgba(244,164,140,.16);color-scheme:dark}
 body[data-cat="game"]{--room:#2a1d52;--room2:#1f1540;--ink:#f1eefb;--sub:#b3a8d8;--acc:#6ff0c8;--accInk:#14102a;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--field:rgba(255,255,255,.09);--shelf:#170f33;--glow:rgba(111,240,200,.16);color-scheme:dark}
+body[data-cat="music"]{--room:#1a1a20;--room2:#121216;--ink:#f3f1ee;--sub:#aaa49c;--acc:#ff8a3d;--accInk:#1d0e04;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.13);--field:rgba(255,255,255,.08);--shelf:#0b0b0e;--glow:rgba(255,138,61,.16);color-scheme:dark}
 body[data-cat="art"]{--room:#ecebe7;--room2:#e1e0da;--ink:#1c1c1e;--sub:#686763;--acc:#2541d6;--accInk:#ffffff;--card:rgba(0,0,0,.045);--line:rgba(0,0,0,.12);--field:rgba(0,0,0,.05);--shelf:#cfcdc6;--glow:rgba(37,65,214,.12);color-scheme:light}
 /* 夜：照明が落ちて、上からスタンドの灯り。芸術の部屋は暗い展示室になる */
 body.night{--lamp:rgba(255,196,120,.11)}
@@ -18,6 +19,7 @@ body.night[data-cat="anime"]{--room:#0b313c;--room2:#07242d}
 body.night[data-cat="movie"]{--room:#310913;--room2:#22050d}
 body.night[data-cat="book"]{--room:#103126;--room2:#0b241b}
 body.night[data-cat="game"]{--room:#221745;--room2:#191035}
+body.night[data-cat="music"]{--room:#141418;--room2:#0e0e11}
 body.night[data-cat="art"]{--room:#272521;--room2:#1e1d1a;--ink:#f1eee6;--sub:#b3ada0;--acc:#93a6ff;--accInk:#14183a;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#171613;--glow:rgba(147,166,255,.14);color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -578,3 +580,88 @@ textarea.vc:focus{outline:0;border-color:var(--acc)}
 .relbox .rd{font-size:13px;color:var(--sub)}
 .relbox .rd b{font-size:30px;color:var(--acc);margin:0 4px}
 #kindF .seg{margin-bottom:2px}
+
+.wishhd{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.wishhd b{font:600 20px/1 var(--mincho);color:var(--acc)}
+.mtop b small{display:block;font:500 11px/1.3 var(--gothic);color:var(--sub)}
+
+/* ===== v7 追加 ===== */
+/* 音楽：ジャケットとレコード */
+.discs{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:20px 14px}
+.jk{text-align:left;min-width:0}
+.jk .art{position:relative;display:block;width:100%;aspect-ratio:1.16}
+.jk .sl{position:absolute;z-index:2;left:0;top:0;height:100%;aspect-ratio:1;border-radius:2px;overflow:hidden;box-shadow:0 10px 18px -8px rgba(0,0,0,.65)}
+.jk .rec{position:absolute;z-index:1;right:0;top:4%;height:92%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,var(--col) 0 15%,#0c0c0c 15.5% 17%,transparent 17.5%),repeating-radial-gradient(circle,#131313 0 1.4px,#242424 1.4px 2.8px);box-shadow:0 6px 12px -6px rgba(0,0,0,.7);transition:transform .5s var(--spring)}
+.jk .rec::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 30deg,transparent 0 10%,rgba(255,255,255,.08) 14%,transparent 20% 60%,rgba(255,255,255,.06) 64%,transparent 70%)}
+.jk.single .rec{height:78%;top:11%}
+.jk:hover .rec,.jk:active .rec{transform:translateX(9%) rotate(40deg)}
+.jk b{display:block;margin-top:8px;font:600 13px/1.35 var(--mincho);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.jk small{display:block;font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jk.want .art{opacity:.5}
+.anim .jk{animation:cvin .7s var(--spring) both;animation-delay:calc(var(--i) * 30ms)}
+.sech{margin:26px 2px 10px;font:600 18px/1.3 var(--mincho)}
+.g-music{background:var(--col);color:var(--fg)}
+.g-music i{right:-22cqw;top:14cqw;width:72cqw;height:72cqw;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9) 0 9%,transparent 9.5%),repeating-radial-gradient(circle,rgba(0,0,0,.82) 0 1cqw,rgba(40,40,40,.85) 1cqw 2cqw)}
+.g-music em{left:7cqw;top:7cqw;font:800 6.5cqw/1 var(--gothic);letter-spacing:.12em;opacity:.85}
+.g-music b{left:7cqw;right:34cqw;bottom:17cqw;font:800 13cqw/1.15 var(--gothic);max-height:46cqw;overflow:hidden}
+.g-music small{left:7cqw;right:7cqw;bottom:7cqw;font:600 6.5cqw/1.2 var(--gothic);opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cv.sq .bk{aspect-ratio:1}
+.hero .bk.sq{aspect-ratio:1;width:min(62vw,250px)}
+.th.sq{height:40px;margin:9px 0}
+.tier .ti .th.sq,.picks .th.sq{height:34px}
+.tk.live .r b{font-size:20px}
+/* 曲・セットリスト */
+.tracks{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.tracks button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line)}
+.tracks .n{flex:none;width:22px;text-align:right;color:var(--sub);font-size:13px}
+.tracks .tt{flex:1;min-width:0}
+.tracks .tt b{display:block;font:600 14.5px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tracks .tt small{display:block;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tracks .lv{flex:none;font:700 10.5px/1 var(--gothic);font-style:normal;padding:4px 7px;border-radius:9px;border:1px solid var(--acc);color:var(--acc)}
+.tracks .r{flex:none;color:var(--acc);font-weight:700;font-size:13px}
+.livebox .lvv{margin:8px 0 10px;font-size:14px}
+.lnk{font-size:13px;color:var(--sub);text-decoration:underline;text-underline-offset:3px}
+.rerate{display:inline-block;margin-top:10px}
+.artist{font-size:13px;color:var(--acc);font-weight:700}
+.honors{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0 2px}
+.honors span{font:700 11.5px/1 var(--gothic);padding:6px 10px;border-radius:12px;background:var(--card);border:1px solid var(--acc);color:var(--acc)}
+/* 関連・アーティスト */
+.links{display:grid;gap:8px}
+.lk{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px 10px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.lk .th{width:34px;height:50px}
+.lk .th.sq{height:34px;margin:8px 0}
+.lk .tx{min-width:0}
+.lk b{display:block;font:600 14px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk small{font-size:11.5px;color:var(--sub)}
+.arh{margin:14px 2px 8px;font-size:12px;color:var(--sub)}
+#dArtist .stat{margin-top:0}
+.picks b small{display:block;font:500 11px/1.3 var(--gothic);color:var(--acc)}
+/* 1話ずつ */
+.epplus{display:grid;place-items:center;align-content:center;gap:2px;width:100%;height:64px;margin-top:14px;font-size:19px}
+.epplus small{font:600 11.5px/1 var(--gothic);opacity:.8}
+.eprow{display:flex;align-items:flex-end;gap:8px;margin-top:12px}
+.eprow .f{flex:1}
+.eprow .btn{flex:none}
+/* ベスト10・マイブーム */
+.ynav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 2px 12px}
+.ynav b{font:600 19px/1.2 var(--mincho)}
+.ynav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);font-size:18px}
+.ynav button:disabled{opacity:.3}
+.best{list-style:none;margin:0;padding:0}
+.best button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 2px;border-bottom:1px solid var(--line)}
+.best .bn{flex:none;width:30px;text-align:center;font:600 24px/1 var(--mincho);color:var(--acc)}
+.best li:nth-child(n+4) .bn{font-size:18px;color:var(--sub)}
+.best .tx{flex:1;min-width:0}
+.best b{display:block;font:600 15px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.best small{display:block;font-size:12px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.best .br{flex:none;font-size:13px;color:var(--acc);font-weight:700}
+.anim .best li,.anim .bmon{animation:rowin .5s var(--ease) both;animation-delay:calc(var(--i) * 40ms)}
+.bmon{padding:12px 0;border-bottom:1px solid var(--line)}
+.bmh{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.bmh b{font:600 17px/1.3 var(--mincho)}
+.bmh .pick{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--acc);color:var(--acc);font-size:12.5px;font-weight:700}
+.bmi{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.bmi button{text-align:left;min-width:0}
+.bmi .th{width:100%;height:auto;aspect-ratio:1;margin:0}
+.bmi small{display:block;margin-top:4px;font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dk[hidden]{display:none!important}

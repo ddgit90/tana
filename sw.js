@@ -1,5 +1,5 @@
 // オフラインで動かすための仕組み（一度開いたら、次からは保存した中身で起動。裏で新しい版を取りに行く）
-const CACHE = 'kura-v6';
+const CACHE = 'kura-v7';
 const FILES = ['./', './index.html', './kura.css', './kura.js', './manifest.webmanifest', './icon.png'];
 
 self.addEventListener('install', (e) => {
