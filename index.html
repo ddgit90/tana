@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#23317a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -191,6 +191,7 @@
   </div>
   <div class="rate small" id="volRate"></div>
   <textarea class="vc" id="volC" maxlength="3000" placeholder="感想・メモ（ここだけの話）"></textarea>
+  <div id="volLink" hidden></div>
   <div class="tg" id="volOwnRow"><span>持ってる</span><button type="button" class="sw2" id="volOwnSw" role="switch" aria-checked="false" aria-label="持ってる"></button></div>
   <label class="f" id="volPriceF">値段（円）<input id="volPrice" inputmode="numeric" autocomplete="off" maxlength="9"></label>
   <div class="acts"><button type="button" class="btn" data-act="volread" id="volReadB"></button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
@@ -222,6 +223,12 @@
   <input class="search" id="pickQ" type="search" placeholder="さがす" autocomplete="off" style="padding-left:14px">
   <ul class="picks" id="picks"></ul>
   <div class="acts"><button type="button" class="btn" data-act="close">やめる</button><button type="button" class="btn pri" data-act="pickok" id="pickOk">入れる</button></div>
+</div></dialog>
+
+<dialog id="dLink"><div class="sh">
+  <h3>同じ曲が見つかった</h3>
+  <div id="lkBody"></div>
+  <div style="display:grid;gap:8px"><button type="button" class="btn pri" data-act="lks" id="lkS"></button><button type="button" class="btn pri" data-act="lkt" id="lkT"></button><button type="button" class="btn" data-act="lkno">つながない（別の曲として残す）</button></div>
 </div></dialog>
 
 <!-- 並び順の決め方 -->

@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v16';
+const VER = 'v18';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -102,7 +102,7 @@ function fix(x) {
   if (typeof x.perf !== 'string') x.perf = '';
   return x;
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存できなかった（保存領域がいっぱいかも）'); } }
+function save() { try { syncSingles(); } catch (e) { console.error(e); } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存できなかった（保存領域がいっぱいかも）'); } }
 const ui = { filter: 'all', media: '', F: {}, Ft: null, open: new Set((() => { try { return JSON.parse(localStorage['kura.open'] || '[]'); } catch (e) { return []; } })()), adv: false, fk: '', fv: '', tagEdit: false, q: '', tag: '', tagOpen: false, kind: '', genre: '', genreOpen: false, byear: new Date().getFullYear(), rtab: 'tier', vmode: 'open', tow: 'stack' };
 
 /* 写真（IndexedDB）。作品の写真は「id」、巻の写真は「id~巻」で保存 */
@@ -135,7 +135,7 @@ async function hydrate(root = document) {
   }
 }
 const imgKeys = (x) => [x.img ? x.id : null, ...Object.entries(x.v || {}).filter(([, d]) => d && d.img).map(([n]) => `${x.id}~${n}`)].filter(Boolean);
-const imgKey = (x) => (x.coverVol && x.v[x.coverVol] && x.v[x.coverVol].img ? `${x.id}~${x.coverVol}` : x.img ? x.id : '');
+const imgKey = (x) => x._alb ? ((x._alb.v[x._n] || {}).img ? x.id : imgKey(x._alb)) : (x.coverVol && x.v[x.coverVol] && x.v[x.coverVol].img ? `${x.id}~${x.coverVol}` : x.img ? x.id : '');
 function avgColor(c) {
   const t = document.createElement('canvas'); t.width = t.height = 8; const tx = t.getContext('2d'); tx.drawImage(c, 0, 0, 8, 8);
   const d = tx.getImageData(0, 0, 8, 8).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
@@ -560,10 +560,10 @@ const discCls = (x) => (x.media === 'CD' ? ' cd' : '');
 /* アルバムの中の曲：シングルと同じ見た目で出す（写真はその曲のがあればそれ、なければアルバムの） */
 function trkPh(x, i) { const d = x.v[i] || {}, k = d.img ? `${x.id}~${i}` : imgKey(x); return `<div class="ph"${k ? ` data-img="${esc(k)}"` : ''}>${genHTML({ ...x, title: d.t || `${i}曲目`, _em: `TRACK ${i}` })}</div>`; }
 function trackCards(P, withAlbum) {
-  const view = S.view.music, T = (x, i) => esc((x.v[i] || {}).t || `${i}曲目`), sub = (x, i) => (withAlbum ? `${esc(x.title)}・` : '') + `${i}曲目`, at = (x, i) => `data-kid="${esc(x.id)}" data-kn="${i}" style="--col:${colOf(x)}"`;
+  const view = S.view.music, T = (x, i) => esc((x.v[i] || {}).t || `${i}曲目`), sg = (x, i) => ((x.v[i] || {}).sid ? '<em class="sgl">SINGLE</em>' : ''), sub = (x, i) => sg(x, i) + (withAlbum ? `${esc(x.title)}・` : '') + `${i}曲目`, at = (x, i) => `${(x.v[i] || {}).sid ? `data-goid="${esc(x.v[i].sid)}"` : `data-kid="${esc(x.id)}" data-kn="${i}"`} style="--col:${colOf(x)}"`;
   if (view === 'shelf') return `<div class="discs">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<button class="jk single trk${discCls(x)}" ${at(x, i)}><span class="art"><i class="rec"></i><span class="sl vt">${trkPh(x, i)}</span></span><b>${T(x, i)}</b><small>${sub(x, i)}${d.r ? `　★${d.r}` : ''}</small></button>`; }).join('')}</div>`;
   if (view === 'cover') return `<div class="covers">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<button class="cv sq trk" ${at(x, i)}><div class="bk vt r"><div class="fc">${trkPh(x, i)}</div><span class="ed"></span></div><b>${T(x, i)}</b><small>${d.r ? starsHTML(d.r) : sub(x, i)}</small></button>`; }).join('')}</div>`;
-  return `<ul class="rows">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<li><button class="row trk" ${at(x, i)}><span class="th vt sq">${trkPh(x, i)}</span><span class="tx"><b>${T(x, i)}</b><small>${withAlbum ? `${esc(x.title)}　` : ''}${i}曲目${x.creator ? '　' + esc(x.creator) : ''}</small>${d.c ? '<span class="pill">感想あり</span>' : ''}</span><span class="rt">${d.r ? `<b class="num">${d.r}</b><br>${starsHTML(d.r)}` : '<small>—</small>'}</span></button></li>`; }).join('')}</ul>`;
+  return `<ul class="rows">${P.map(([x, i]) => { const d = x.v[i] || {}; return `<li><button class="row trk" ${at(x, i)}><span class="th vt sq">${trkPh(x, i)}</span><span class="tx"><b>${T(x, i)}</b><small>${sg(x, i)}${withAlbum ? `${esc(x.title)}　` : ''}${i}曲目${x.creator ? '　' + esc(x.creator) : ''}</small>${d.c ? '<span class="pill">感想あり</span>' : ''}</span><span class="rt">${d.r ? `<b class="num">${d.r}</b><br>${starsHTML(d.r)}` : '<small>—</small>'}</span></button></li>`; }).join('')}</ul>`;
 }
 function xbtn(x) { if (!canKids(x) || albumTap(x)) return ''; const C = Cx(x); return `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}" data-xopen="${esc(x.id)}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols}${C.vol}</span>`; }
 function kidsHTML(x) {
@@ -576,7 +576,7 @@ function albumTracksHTML() {
   const q = norm(ui.q), rows = [];
   for (const x of itemsOf('music')) {
     if (kindOf(x) !== 'album' || !x.vols || !matchF(x, ui.F)) continue;
-    for (let i = 1; i <= Math.min(x.vols, 300); i++) { const d = x.v[i] || {}; if (!d.t) continue; if (q && !norm(d.t + ' ' + x.title + ' ' + (x.creator || '')).includes(q)) continue; rows.push([x, i, d]); }
+    for (let i = 1; i <= Math.min(x.vols, 300); i++) { const d = x.v[i] || {}; if (!d.t || d.sid) continue; if (q && !norm(d.t + ' ' + x.title + ' ' + (x.creator || '')).includes(q)) continue; rows.push([x, i, d]); }
   }
   if (!rows.length) return '';
   return `<h3 class="sech">アルバムの中の曲（${rows.length}）</h3>${trackCards(rows, true)}`;
@@ -617,17 +617,17 @@ function drawRank(el, a, shHead) {
   hydrate(el);
 }
 
-const bestOf = (cat, y) => (((S.best[cat] || {})[y]) || []).filter((id) => findItem(id));
-const trkItem = (x, i) => ({ id: `${x.id}~${i}`, cat: 'music', title: (x.v[i] || {}).t || `${i}曲目`, creator: x.creator || '', yomi: '', tags: [], kind: 'song', media: x.media, _alb: x, _n: i });
+const bestOf = (cat, y) => (((S.best[cat] || {})[y]) || []).filter((id) => findItem(id) || trkRef(id));
+const trkItem = (x, i) => { const d = x.v[i] || {}; return { id: `${x.id}~${i}`, cat: 'music', title: d.t || `${i}曲目`, creator: x.creator || '', perf: x.perf || '', genre: x.genre || '', yomi: '', tags: [], kind: 'song', media: x.media, color: x.color, rating: d.r || 0, v: {}, img: false, _em: `TRACK ${i}`, _alb: x, _n: i, date: x.date || '', created: x.created }; };
 function trkRef(id) { const [a, n] = String(id).split('~'); if (!n) return null; const x = findItem(a); return x && +n <= x.vols && (x.v[n] || {}).t ? trkItem(x, +n) : null; }
 const boomItem = (id) => findItem(id) || trkRef(id);
 const boomOf = (m) => (S.boom[m] || []).filter(boomItem);
 const ym = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const ymText = (m) => `${+m.slice(0, 4)}年${+m.slice(5)}月`;
 function drawBest(el, head) {
-  const y = ui.byear, now = new Date().getFullYear(), l = bestOf(S.cat, y).map(findItem);
+  const y = ui.byear, now = new Date().getFullYear(), l = bestOf(S.cat, y).map(boomItem);
   el.innerHTML = head + `<div class="ynav"><button data-by="-1" aria-label="前の年">‹</button><b>${y}年のベスト10</b><button data-by="1" aria-label="次の年"${y >= now ? ' disabled' : ''}>›</button></div>` +
-    (l.length ? `<ol class="best">${l.map((x, i) => `<li style="--i:${i}"><button data-id="${esc(x.id)}"><span class="bn num">${i + 1}</span><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x, { prog: false })}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x))}</small></span>${rt(x) ? `<span class="num br">★${rt(x)}</span>` : ''}</button></li>`).join('')}</ol>` : `<div class="empty"><b>${y}年のベスト10はまだ</b>下の「選ぶ」から10個まで選んで、順番を決められる。</div>`) +
+    (l.length ? `<ol class="best">${l.map((x, i) => `<li style="--i:${i}"><button ${x._alb ? `data-kid="${esc(x._alb.id)}" data-kn="${x._n}"` : `data-id="${esc(x.id)}"`}><span class="bn num">${i + 1}</span><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x, { prog: false })}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(x._alb ? `${x._alb.title}・${x._n}曲目　${x.creator}` : meta(x))}</small></span>${rt(x) ? `<span class="num br">★${rt(x)}</span>` : ''}</button></li>`).join('')}</ol>` : `<div class="empty"><b>${y}年のベスト10はまだ</b>下の「選ぶ」から10個まで選んで、順番を決められる。</div>`) +
     `<div class="acts" style="margin-top:14px"><button class="btn sm pri" data-act="bestpick">選ぶ（${l.length}/10）</button>${l.length > 1 ? '<button class="btn sm" data-act="bestord">順番を変える</button>' : ''}</div>`;
   hydrate(el);
 }
@@ -735,7 +735,7 @@ function trackRows(x) {
   const C = Cx(x), live = kindOf(x) === 'live'; let h = '';
   for (let i = 1; i <= x.vols; i++) {
     const d = x.v[i] || {}, heard = !live && livesWith(x.creator, d.t).length, song = live && songOf(x.creator, d.t);
-    h += `<li><button data-vopen="${i}"><span class="n num">${i}</span><span class="tt"><b>${esc(d.t || C.volN(i))}</b>${d.c ? `<small>${esc(d.c)}</small>` : ''}</span>${heard ? '<em class="lv">生で聴いた</em>' : ''}${song ? `<em class="lv go2" data-goid="${esc(song.id)}">曲へ ›</em>` : ''}${d.r ? `<span class="num r">★${d.r}</span>` : ''}</button></li>`;
+    h += `<li><button data-vopen="${i}"><span class="n num">${i}</span><span class="tt"><b>${esc(d.t || C.volN(i))}</b>${d.c ? `<small>${esc(d.c)}</small>` : ''}</span>${heard ? '<em class="lv">生で聴いた</em>' : ''}${song ? `<em class="lv go2" data-goid="${esc(song.id)}">曲へ ›</em>` : ''}${!live && d.sid && findItem(d.sid) ? `<em class="lv go2" data-goid="${esc(d.sid)}">SINGLE ›</em>` : ''}${d.r ? `<span class="num r">★${d.r}</span>` : ''}</button></li>`;
   }
   return h;
 }
@@ -748,6 +748,8 @@ function musicHTML(x) {
   } else if (k === 'album') {
     h += `<div class="sec"><h4>曲${x.vols ? `（${x.vols}曲）` : ''}</h4>${x.vols ? `<ol class="tracks">${trackRows(x)}</ol>` : '<p class="hint">「編集」で曲名を1行に1曲ずつ入れると、曲ごとに評価できる。</p>'}<button class="lnk" data-act="trackadd" style="margin-top:8px">＋ 曲を足す</button></div>`;
   } else {
+    const inA = linkedAlbums(x);
+    if (inA.length) h += `<div class="sec"><h4>収録アルバム</h4><p class="hint" style="margin:0 2px 8px">${inA.map(([a, i]) => `『${esc(a.title)}』${i}曲目`).join('・')}。評価と感想はアルバムの曲と共通。</p><div class="links">${inA.map(([a]) => linkCard(a)).join('')}</div></div>`;
     const lv = livesWith(x.creator, x.title);
     if (lv.length) h += `<div class="sec"><h4>生で聴いた（${lv.length}回）</h4><div class="links">${lv.map(linkCard).join('')}</div></div>`;
   }
@@ -921,6 +923,57 @@ function burst(el) {
     document.body.append(p); setTimeout(() => p.remove(), 650);
   }
 }
+/* ===== シングルとアルバムの中の同じ曲をつなぐ（評価・感想を共通にする） ===== */
+const songKey = (title, cr) => (title && cr ? norm(cr) + '|' + norm(title) : '');
+const linkQ = []; ui.asked = new Set();
+function eachTrack(f) { for (const a of S.items) { if (a.cat !== 'music' || kindOf(a) !== 'album') continue; for (let i = 1; i <= Math.min(a.vols || 0, 300); i++) { const d = a.v[i]; if (d && d.t) f(a, i, d); } } }
+const mergeTxt = (p, q) => (!p ? q || '' : !q || p === q ? p : `${p}\n—\n${q}`);
+function linkTrack(a, i, s, keep) {
+  const d = vget(a, i);
+  if (keep === 'track') { if (d.r) s.rating = d.r; s.review = mergeTxt(d.c, s.review); }
+  else { if (!s.rating && d.r) s.rating = d.r; s.review = mergeTxt(s.review, d.c); }
+  d.sid = s.id; delete d.nos; d.u = s.updated = Date.now();
+}
+function syncSingles() {
+  const songs = S.items.filter((x) => x.cat === 'music' && kindOf(x) === 'song'), byId = new Map(songs.map((x) => [x.id, x])), byKey = new Map();
+  for (const x of songs) { const k = songKey(x.title, x.creator); if (k && !byKey.has(k)) byKey.set(k, x); }
+  const links = new Map();
+  eachTrack((a, i, d) => {
+    if (d.sid) { if (!byId.has(d.sid)) { delete d.sid; return; } (links.get(d.sid) || links.set(d.sid, []).get(d.sid)).push(d); return; }
+    if (d.nos) return;
+    const s = byKey.get(songKey(d.t, a.creator)); if (!s) return;
+    const clash = (d.r && s.rating && d.r !== s.rating) || (d.c && s.review && d.c !== s.review);
+    if (!clash) { linkTrack(a, i, s); (links.get(s.id) || links.set(s.id, []).get(s.id)).push(d); return; }
+    const key = `${a.id}~${i}`; if (!ui.asked.has(key)) { ui.asked.add(key); linkQ.push([a.id, i, s.id]); }
+  });
+  for (const [sid, ds] of links) {
+    const s = byId.get(sid), top = ds.reduce((m, d) => ((d.u || 0) > (m ? m.u || 0 : 0) ? d : m), null);
+    if (top && (top.u || 0) > (s.updated || 0)) { if (top.r) s.rating = top.r; if (top.c) s.review = top.c; s.updated = top.u; }
+    for (const d of ds) { if (s.rating) d.r = s.rating; if (s.review) d.c = s.review; d.u = s.updated; }
+  }
+  if (linkQ.length && !$('#dLink').open) setTimeout(askLink, 300);
+}
+function askLink() {
+  while (linkQ.length) {
+    const [aid, i, sid] = linkQ[0], a = findItem(aid), s = findItem(sid), d = a && a.v[i];
+    if (!a || !s || !d || d.sid || d.nos) { linkQ.shift(); continue; }
+    const side = (r, c) => `${r ? `<b class="num">★${r}</b>` : '<span class="hint">評価なし</span>'}${c ? `<small>${esc(c.length > 60 ? c.slice(0, 58) + '…' : c)}</small>` : ''}`;
+    $('#lkBody').innerHTML = `<p class="hint">「${esc(d.t)}」（${esc(a.creator)}）がシングルとアルバム『${esc(a.title)}』の${i}曲目の両方にある。つなぐと1曲として扱って、評価と感想が共通になる。評価が違うから、どっちを残すか選んでね（感想は両方あればつなげて残す）。</p>
+      <div class="lkcmp"><div><span>シングル</span>${side(s.rating, s.review)}</div><div><span>アルバムの${i}曲目</span>${side(d.r, d.c)}</div></div>`;
+    $('#lkS').textContent = `シングルの${s.rating ? '★' + s.rating : '評価'}を残す`; $('#lkT').textContent = `アルバムの${d.r ? '★' + d.r : '評価'}を残す`;
+    if (!$('#dLink').open) $('#dLink').showModal();
+    return;
+  }
+  if ($('#dLink').open) $('#dLink').close();
+}
+function answerLink(how) {
+  const q = linkQ.shift(); if (!q) return;
+  const [aid, i, sid] = q, a = findItem(aid), s = findItem(sid);
+  if (a && s) { if (how === 'no') vget(a, i).nos = 1; else { linkTrack(a, i, s, how); toast('つないだ。評価と感想が共通になった'); } }
+  save(); render(); const cp = curItem(); if (cp) renderPage(cp);
+  if (linkQ.length) askLink(); else $('#dLink').close();
+}
+const linkedAlbums = (s) => { const out = []; eachTrack((a, i, d) => { if (d.sid === s.id) out.push([a, i]); }); return out; };
 const touch = (x) => { x.updated = x.touched = Date.now(); save(); };
 function setStatus(x, st, date) {
   if (x.status !== st) {
@@ -988,6 +1041,9 @@ async function drawVolSheet() {
   $('#volPriceF').hidden = !S.set.money; $('#volPrice').value = d.p || '';
   $('#volReadB').textContent = n <= x.cur ? 'ここから「まだ」に戻す' : `ここまで${C.did}`;
   $('#volRm').hidden = !d.img;
+  const albumTrk = isM && kindOf(x) === 'album', sg = albumTrk && d.sid && findItem(d.sid);
+  $('#volLink').hidden = !albumTrk;
+  if (albumTrk) $('#volLink').innerHTML = sg ? `<p class="hint" style="margin:0">シングル「${esc(sg.title)}」とつながってる。評価と感想は共通。</p><div class="kfoot"><button class="lnk" data-goid="${esc(sg.id)}">シングルのページ ›</button><button class="lnk" data-act="unlinksg">つながりを外す</button></div>` : `<button class="lnk" data-act="linksg">シングルとつなぐ（評価・感想を共通にする）</button>`;
   const pv = $('#volPv');
   pv.innerHTML = genHTML(x, n);
   if (d.img) { const u = await imgURL(`${x.id}~${n}`); if (u && vol && vol.n === n) pv.innerHTML = `<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover">`; }
@@ -995,7 +1051,7 @@ async function drawVolSheet() {
 let vct;
 $('#volC').addEventListener('input', (e) => {
   const x = vol && findItem(vol.id); if (!x) return;
-  const v = e.target.value.slice(0, 3000); if (v) vget(x, vol.n).c = v; else if (x.v[vol.n]) delete x.v[vol.n].c;
+  const v = e.target.value.slice(0, 3000); if (v) vget(x, vol.n).c = v; else if (x.v[vol.n]) delete x.v[vol.n].c; if (x.v[vol.n]) x.v[vol.n].u = Date.now();
   clearTimeout(vct); vct = setTimeout(() => touch(x), 400);
 });
 $('#volTitle').addEventListener('input', (e) => {
@@ -1264,11 +1320,34 @@ function openPick() {
   showPick({ h, title: `「${h.name}」に入れる作品`, hint: '登録してある作品から選ぶだけ。チェックを外すと棚から出る（作品は消えない）。', okL: '入れる', sel: new Set(itemsOf(S.cat).filter((x) => x.sh.includes(h.id)).map((x) => x.id)), cands: () => itemsOf(S.cat), save: pickSave });
 }
 function orderedSel(oldIds, sel) { return oldIds.filter((id) => sel.has(id)).concat([...sel].filter((id) => !oldIds.includes(id))); }
+/* 選ぶ画面のタブ：音楽は種類＋ジャンル、アニメは種類、ほかの部屋はタグ（グループ順） */
+const kdOf = (x) => (x._alb ? 'trk' : kindOf(x));
+function pickTabsFor(cat, cands) {
+  const T = [['all', 'すべて', () => true]];
+  if (cat === 'music') {
+    T.push(['song', 'シングル', (x) => kdOf(x) === 'song'], ['album', 'アルバム', (x) => kdOf(x) === 'album'], ['trk', 'アルバムの曲', (x) => kdOf(x) === 'trk']);
+    const g = new Map(); for (const x of cands) { const v = (x.genre || '').trim(); if (v) g.set(v, (g.get(v) || 0) + 1); }
+    [...g].sort((a, b) => ((GENRES.indexOf(a[0]) + 1 || 99) - (GENRES.indexOf(b[0]) + 1 || 99)) || b[1] - a[1]).forEach(([v]) => T.push(['g:' + v, v, (x) => (x.genre || '').trim() === v]));
+  } else {
+    if (KINDS[cat]) KINDS[cat].forEach(([k, l]) => T.push(['k:' + k, l, (x) => kindOf(x) === k]));
+    const c = new Map(); for (const x of cands) for (const t of x.tags) c.set(t, (c.get(t) || 0) + 1);
+    groupTags(c).flatMap(([, l]) => l).slice(0, 14).forEach((t) => T.push(['t:' + t, '#' + t, (x) => x.tags.includes(t)]));
+  }
+  return T;
+}
+const albumTrackItems = () => itemsOf('music').filter((x) => kindOf(x) === 'album').flatMap((x) => Array.from({ length: Math.min(x.vols || 0, 300) }, (_, k) => k + 1).filter((i) => (x.v[i] || {}).t && !(x.v[i] || {}).sid).map((i) => trkItem(x, i)));
 function openBestPick() {
-  const cat = S.cat, y = ui.byear, ys = String(y), old = bestOf(cat, y);
-  const boomed = new Set(Object.keys(S.boom).filter((m) => m.startsWith(ys)).flatMap((m) => S.boom[m].map((q) => String(q).split('~')[0])));
-  const pri = (x) => (boomed.has(x.id) ? 0 : (x.date || '').startsWith(ys) || (x.ldate || '').startsWith(ys) ? 1 : 2);
-  showPick({ title: `${y}年のベスト10を選ぶ`, hint: cat === 'music' ? `${y}年のマイブームに入れたものが上に出る。ほかの作品も選べる。` : `${y}年に${CATS[cat].did}ものが上に出る。ほかの作品も選べる。`, okL: '決める', max: 10, sel: new Set(old), cands: () => itemsOf(cat), pri, sub: (x) => (boomed.has(x.id) ? `${y}年のマイブーム` : pri(x) === 1 ? `${y}年に${CATS[cat].did}` : ''),
+  const cat = S.cat, y = ui.byear, ys = String(y), old = bestOf(cat, y), C = CATS[cat], mus = cat === 'music';
+  const boomIds = Object.keys(S.boom).filter((m) => m.startsWith(ys)).flatMap((m) => S.boom[m].map(String));
+  const boomed = new Set([...boomIds, ...boomIds.map((q) => q.split('~')[0])]);
+  const did = (x) => { const z = x._alb || x; return (z.date || '').startsWith(ys) || (z.ldate || '').startsWith(ys); };
+  const pri = (x) => (boomed.has(x.id) ? 0 : did(x) ? 1 : 2);
+  const cands = () => (mus ? [...itemsOf(cat).filter((x) => kindOf(x) !== 'live'), ...albumTrackItems()] : itemsOf(cat));
+  showPick({ title: `${y}年のベスト10を選ぶ`, hint: mus ? `${y}年のマイブームに入れたもの、${y}年に聴いたものが上に出る。上のタブで種類やジャンルに分けて探せる。` : `${y}年に${C.did}ものが上に出る。上のタブで種類やタグに分けて探せる。評価が高い順に並ぶ。`,
+    okL: '決める', max: 10, sel: new Set(old), grid: true, cands, tabs: pickTabsFor(cat, cands()), pri,
+    group: (x) => (pri(x) === 0 ? `${y}年のマイブーム` : pri(x) === 1 ? `${y}年に${C.did}もの` : mus ? x.creator || 'アーティスト未入力' : 'ほかの作品'),
+    order: (p, q) => rt(q) - rt(p),
+    sub: (x) => (x._alb ? x._alb.title : mus ? (kindOf(x) === 'album' ? 'アルバム' : '') : rt(x) ? `★${rt(x)}` : ''),
     save: (sel) => { (S.best[cat] = S.best[cat] || {})[y] = orderedSel(old, sel); if (!S.best[cat][y].length) delete S.best[cat][y]; } });
 }
 function openBoomPick(m) {
@@ -1277,8 +1356,8 @@ function openBoomPick(m) {
   const inMon = (x) => { const y = x._alb || x; return [(y.date || '').slice(0, 7), ymOf(y.created)].includes(m); };
   const kd = (x) => (x._alb ? 'trk' : kindOf(x));
   showPick({ title: `${ymText(m)}のマイブーム`, hint: `その月にハマってた曲・アルバムを${BOOM_MAX}つまで。アルバムの中の1曲も選べる。アーティストごとに並ぶ。`, okL: '決める', max: BOOM_MAX, sel: new Set(old), grid: true,
-    cands: () => [...mus().filter((x) => kindOf(x) !== 'live'), ...mus().filter((x) => kindOf(x) === 'album').flatMap((x) => Array.from({ length: Math.min(x.vols || 0, 300) }, (_, k) => k + 1).filter((i) => (x.v[i] || {}).t).map((i) => trkItem(x, i)))],
-    tabs: [['all', 'すべて', () => true], ['song', 'シングル', (x) => kd(x) === 'song'], ['album', 'アルバム', (x) => kd(x) === 'album'], ['trk', 'アルバムの曲', (x) => kd(x) === 'trk']],
+    cands: () => [...mus().filter((x) => kindOf(x) !== 'live'), ...albumTrackItems()],
+    tabs: pickTabsFor('music', [...mus(), ...albumTrackItems()]),
     pri: (x) => (inMon(x) ? 0 : 1), group: (x) => (inMon(x) ? `${ymText(m)}に聴いた・足したもの` : x.creator || 'アーティスト未入力'),
     sub: (x) => (x._alb ? x._alb.title : kindOf(x) === 'album' ? 'アルバム' : ''),
     save: (sel) => { S.boom[m] = orderedSel(old, sel); if (!S.boom[m].length) delete S.boom[m]; } });
@@ -1298,7 +1377,7 @@ function drawPicks() {
   drawPickTabs(all);
   const gk = (x) => (P.sel.has(x.id) ? '' : P.group ? P.group(x) : '');
   const a = all.filter((x) => (!tf || tf(x)) && (!q || norm([x.title, x.yomi, x.creator, ...x.tags, x._alb ? x._alb.title : ''].join(' ')).includes(q)))
-    .sort((x, y) => (P.sel.has(y.id) - P.sel.has(x.id)) || (P.pri ? P.pri(x) - P.pri(y) : 0) || (P.group ? coll.compare(gk(x), gk(y)) : 0) || coll.compare(titleKey(x), titleKey(y)));
+    .sort((x, y) => (P.sel.has(y.id) - P.sel.has(x.id)) || (P.pri ? P.pri(x) - P.pri(y) : 0) || (P.group ? coll.compare(gk(x), gk(y)) : 0) || (P.order ? P.order(x, y) : 0) || coll.compare(titleKey(x), titleKey(y)));
   let last = null; const out = [];
   for (const x of a.slice(0, 400)) {
     if (P.group) { const h = P.sel.has(x.id) ? '選んでるもの' : P.group(x); if (h !== last) { out.push(`<li class="pgh">${esc(h)}</li>`); last = h; } }
@@ -1657,7 +1736,7 @@ document.addEventListener('click', (e) => {
   const mv = t.closest('[data-mv]'); if (mv && ord && ord.tmp) { const i = +mv.dataset.mi, j = i + +mv.dataset.mv; if (j < 0 || j >= ord.tmp.length) return; const a = ord.tmp; [a[i], a[j]] = [a[j], a[i]]; drawOrd(a[j].id); return; }
   /* 巻のシート */
   const vs2 = t.closest('#volRate [data-vstar]');
-  if (vs2 && vol) { const x = findItem(vol.id), d = vget(x, vol.n), i = +vs2.dataset.vstar; d.r = d.r === i ? i - 0.5 : i; logEv(x, 'vr', [vol.n, d.r]); touch(x); $('#volRate').innerHTML = rateHTML(d.r, 'vstar', 'vrateclear'); const s = $(`#volRate [data-vstar="${i}"]`); s.classList.add('pop'); burst(s); return; }
+  if (vs2 && vol) { const x = findItem(vol.id), d = vget(x, vol.n), i = +vs2.dataset.vstar; d.r = d.r === i ? i - 0.5 : i; d.u = Date.now(); logEv(x, 'vr', [vol.n, d.r]); touch(x); $('#volRate').innerHTML = rateHTML(d.r, 'vstar', 'vrateclear'); const s = $(`#volRate [data-vstar="${i}"]`); s.classList.add('pop'); burst(s); return; }
   const x = curItem();
   if (x) {
     const C = Cx(x);
@@ -1754,6 +1833,17 @@ document.addEventListener('click', (e) => {
     case 'setpages': if (x) { const n = int($('#pPages').value); if (n) { x.pages = n; touch(x); drawProg(x); } } break;
     case 'vprev': if (vol) { vol.n = Math.max(1, vol.n - 1); drawVolSheet(); } break;
     case 'vnext': if (vol && vx) { vol.n = Math.min(Math.max(vx.vols, vx.cur), vol.n + 1); drawVolSheet(); } break;
+    case 'linksg': { const x = vol && findItem(vol.id); if (!x) break; const n = vol.n, d = x.v[n] || {}, key = songKey(d.t, x.creator);
+      showPick({ title: 'つなぐシングルを選ぶ', hint: '同じ曲のシングルを1つ選ぶ。つなぐと評価と感想が共通になる。', okL: 'つなぐ', max: 1, sel: new Set(), keep: true,
+        cands: () => itemsOf('music').filter((q) => kindOf(q) === 'song'), pri: (q) => (songKey(q.title, q.creator) === key ? 0 : sameArtist(q.creator, x.creator) && q.creator ? 1 : 2), sub: (q) => q.creator || '',
+        save: (sel) => { const s = findItem([...sel][0]); if (!s) return; const dd = vget(x, n); delete dd.nos;
+          if ((dd.r && s.rating && dd.r !== s.rating) || (dd.c && s.review && dd.c !== s.review)) { ui.asked.add(`${x.id}~${n}`); linkQ.unshift([x.id, n, s.id]); setTimeout(askLink, 200); } else { linkTrack(x, n, s); toast('つないだ'); }
+          save(); drawVolSheet(); drawList(); } });
+      break; }
+    case 'unlinksg': { const x = vol && findItem(vol.id); if (!x) break; const d = vget(x, vol.n); delete d.sid; d.nos = 1; save(); drawVolSheet(); drawList(); toast('つながりを外した（評価はそのまま残る）'); break; }
+    case 'lks': answerLink('single'); break;
+    case 'lkt': answerLink('track'); break;
+    case 'lkno': answerLink('no'); break;
     case 'vrateclear': if (vx) { delete vget(vx, vol.n).r; touch(vx); $('#volRate').innerHTML = rateHTML(0, 'vstar', 'vrateclear'); } break;
     case 'volphotorm': if (vx) { const k = `${vx.id}~${vol.n}`; idb.del(k).catch(() => {}); forget(k); delete vget(vx, vol.n).img; touch(vx); drawVolSheet(); } break;
     case 'volread': if (vx) {
@@ -1789,7 +1879,7 @@ document.addEventListener('click', (e) => {
     case 'pick': openPick(); break;
     case 'pickok': pickDone(); break;
     case 'bestpick': openBestPick(); break;
-    case 'bestord': { const l = bestOf(S.cat, ui.byear).map(findItem), y = ui.byear, cat = S.cat; if (l.length < 2) break; ord = { list: l, title: `${y}年のベスト10の順番`, save: (arr) => { S.best[cat][y] = arr.map((q) => q.id); } }; openOrd(); break; }
+    case 'bestord': { const l = bestOf(S.cat, ui.byear).map(boomItem), y = ui.byear, cat = S.cat; if (l.length < 2) break; ord = { list: l, title: `${y}年のベスト10の順番`, save: (arr) => { S.best[cat][y] = arr.map((q) => q.id); } }; openOrd(); break; }
     case 'boomadd': { const m = $('#boomMonth') && $('#boomMonth').value; if (m) openBoomPick(m); else toast('月を選んでね'); break; }
     case 'linkpick': openLinkPick(); break;
     case 'genretoggle': ui.genreOpen = !ui.genreOpen; render(); break;
@@ -1885,6 +1975,8 @@ $('#imp').addEventListener('change', (e) => { if (e.target.files[0]) readImport(
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#page').hidden && !$('dialog[open]')) closeItem(); });
 // 背景の大きな文字をスクロールに合わせてゆっくり動かす
 let ticking = false;
+/* 画面を開いたときに検索欄などへ勝手に入らない（キーボードが出たり画面がズームしたりしない）。見出しに目印だけ置く */
+for (const d of $$('dialog')) { const h = d.querySelector('h3, h2'); if (h) { h.tabIndex = -1; h.setAttribute('autofocus', ''); } }
 /* iPhone（iOS 26）で、画面の見えている範囲と下の基準がずれて下の固定バーが欠けることがある。そのずれ分だけ持ち上げる（キーボードが出ているときは何もしない） */
 (() => {
   const vv = window.visualViewport; if (!vv) return;
