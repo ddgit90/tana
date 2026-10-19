@@ -665,3 +665,7 @@ textarea.vc:focus{outline:0;border-color:var(--acc)}
 .bmi .th{width:100%;height:auto;aspect-ratio:1;margin:0}
 .bmi small{display:block;margin-top:4px;font-size:10.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dk[hidden]{display:none!important}
+
+/* ===== v8 追加 ===== */
+#oldRow{padding:12px 14px}
+.sh h3 .ver{font:500 11px/1 var(--gothic);color:var(--sub)}

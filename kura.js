@@ -1,6 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
+const VER = 'v8';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -351,10 +352,11 @@ const findItem = (id) => S.items.find((i) => i.id === id);
 function spends(x) {
   const o = [];
   if (x.want) return o; /* ほしい物は、まだ買ってないので入れない */
-  if (x.price) o.push([x.pt || x.created, x.price, x.status]);
-  if (x.gp) o.push([x.pt || x.created, x.gp, x.status]);
-  if (x.tp) o.push([x.pt || x.created, x.tp, x.status]);
-  for (const [k, d] of Object.entries(x.v)) if (d && d.p && !(x.ownOn && !d.o)) o.push([d.pt || x.created, d.p, x.series ? (+k <= x.cur ? 'done' : x.status === 'pause' ? 'pause' : 'none') : x.status]);
+  const tt = (v) => (v === 0 ? 0 : v || x.created);
+  if (x.price) o.push([tt(x.pt), x.price, x.status]);
+  if (x.gp) o.push([tt(x.pt), x.gp, x.status]);
+  if (x.tp) o.push([tt(x.pt), x.tp, x.status]);
+  for (const [k, d] of Object.entries(x.v)) if (d && d.p && !(x.ownOn && !d.o)) o.push([tt(d.pt), d.p, x.series ? (+k <= x.cur ? 'done' : x.status === 'pause' ? 'pause' : 'none') : x.status]);
   return o;
 }
 const spentList = (list) => list.reduce((s, x) => s + spentAll(x), 0);
@@ -950,7 +952,7 @@ $('#volTitle').addEventListener('input', (e) => {
 $('#volPrice').addEventListener('change', (e) => {
   const x = vol && findItem(vol.id); if (!x) return;
   const p = int(e.target.value), d = vget(x, vol.n);
-  if (p) { if (!d.p) d.pt = Date.now(); d.p = p; } else { delete d.p; delete d.pt; }
+  if (p) { if (!d.p) d.pt = x.old ? 0 : Date.now(); d.p = p; } else { delete d.p; delete d.pt; }
   touch(x);
 });
 $('#volIn').addEventListener('change', async (e) => {
@@ -1003,6 +1005,12 @@ function openEdit(id) {
     $('#finL').firstChild.textContent = C.ser.finQ; $('#finH').textContent = C.ser.finH;
   }
   $('#ownF').hidden = !C.own;
+  if (!x) { draft.old = !!ui.oldDef; if (draft.old) draft.wm = 'none'; }
+  { const py = draft.pt ? new Date(draft.pt).getFullYear() : 0;
+    draft.buy = x && x.price ? (draft.pt === 0 ? 'unk' : py && py !== new Date().getFullYear() ? 'year' : 'now') : draft.old ? 'unk' : 'now';
+    f.buyY.value = draft.buy === 'year' ? py : ''; }
+  $('#oldL').firstChild.textContent = `前から持ってる・前に${C.did}もの`;
+  setSw('#oldSw', draft.old); drawBuy();
   drawUnit(); drawStSeg();
   setSw('#serSw', draft.series); setSw('#doneSw', draft.done); $('#serF').hidden = !draft.series;
   $('#delBtn').hidden = !x;
@@ -1015,6 +1023,11 @@ function openEdit(id) {
   if (!x) setTimeout(() => { const ae = document.activeElement; if (!ae || !/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) f.title.focus(); }, 400);
 }
 const drawKind = () => { $('#kindSeg').innerHTML = (KINDS[draft.cat] || []).map(([k, l]) => `<button type="button" data-kind="${k}" class="${kindOf(draft) === k ? 'on' : ''}">${l}</button>`).join(''); };
+function drawBuy() {
+  $$('#buySeg button').forEach((b) => b.classList.toggle('on', b.dataset.buy === draft.buy));
+  $('#buyYF').hidden = draft.buy !== 'year';
+  $('#buyF').hidden = !S.set.money || draft.want || draft.cat === 'art';
+}
 function drawUnit() {
   const Cd = Cx(draft), ep = draft.unit === 'ep';
   $$('#unitSeg button').forEach((b) => b.classList.toggle('on', (ep ? 'ep' : 'vol') === b.dataset.unit));
@@ -1117,7 +1130,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
     hours: game ? dec(f.hours.value) || '' : '',
     platform: game ? f.platform.value.trim() : '', media: m, kind: draft.cat === 'anime' ? (draft.kind === 'drama' ? 'drama' : '') : isM ? mk : '', rel: draft.cat === 'art' || mk === 'live' ? '' : f.reldate.value, app: appOn ? f.app.value.trim() : '', where: whereOn ? f.where.value.trim() : '',
     theater: th ? f.theater.value.trim() : '', seat: th ? f.seat.value.trim() : '', fmt: th ? draft.fmt.slice() : [],
-    price, pt: price ? (x && x.price && !(x.want && !draft.want) ? x.pt || x.created : now) : 0,
+    price, pt: !price ? 0 : draft.want ? now : draft.buy === 'unk' ? 0 : draft.buy === 'year' ? (() => { const yy = int(f.buyY.value); return yy >= 1950 && yy <= 2100 ? new Date(yy, 6, 1, 12).getTime() : 0; })() : (x && x.price && x.pt && !(x.want && !draft.want) ? x.pt : now), old: !!draft.old,
     review: f.review.value.trim(), memo: f.memo.value.trim(), tags: [...new Set(f.tags.value.split(/[\s、,，]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean))].slice(0, 12),
   };
   if (ser && v.cur > 0 && draft.status === 'none') draft.status = 'doing';
@@ -1302,12 +1315,12 @@ function drawTower() {
 /* ===== 使ったお金 ===== */
 function drawMoney() {
   const C = CATS[S.cat], all = itemsOf(S.cat), tot = spentList(all), by = {}, yrs = new Map();
-  for (const x of all) for (const [t, p, st] of spends(x)) { by[st] = (by[st] || 0) + p; const y = new Date(t).getFullYear(); yrs.set(y, (yrs.get(y) || 0) + p); }
+  for (const x of all) for (const [t, p, st] of spends(x)) { by[st] = (by[st] || 0) + p; const y = t ? new Date(t).getFullYear() : 0; yrs.set(y, (yrs.get(y) || 0) + p); }
   $('#mnyT').textContent = `${C.name}に使ったお金`;
   $('#mnyN').textContent = yen(tot);
   $('#mnyS').textContent = `これまでの合計（${all.filter((x) => spentAll(x)).length}${C.unit}分）`;
   $('#mnySt').innerHTML = tot ? C.st.filter(([k]) => by[k]).map(([k, l]) => `<div class="mrow"><span>${l}${k === 'none' ? '<small>まだ手をつけてない分</small>' : ''}</span><b class="num">${yen(by[k])}</b><i style="--w:${(by[k] / tot * 100).toFixed(1)}%"></i></div>`).join('') : '<p class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</p>';
-  $('#mnyY').innerHTML = [...yrs].sort((a, b) => b[0] - a[0]).map(([y, p]) => `<tr><td>${y}年</td><td>${yen(p)}</td></tr>`).join('') || '<tr><td class="hint">—</td><td></td></tr>';
+  $('#mnyY').innerHTML = [...yrs].sort((a, b) => (b[0] || -1) - (a[0] || -1)).map(([y, p]) => `<tr><td>${y ? `${y}年` : '時期不明<br><small class="hint">前から持ってる・覚えてない分</small>'}</td><td>${yen(p)}</td></tr>`).join('') || '<tr><td class="hint">—</td><td></td></tr>';
   const wl = all.filter((x) => wishOf(x)).sort((a, b) => wishOf(b) - wishOf(a));
   $('#mnyWishN').textContent = wl.length ? yen(wl.reduce((a, x) => a + wishOf(x), 0)) : '';
   $('#mnyTop').innerHTML = wl.map((x) => { const m = x.want ? '' : `持ってない${C.vol}の分`; return `<li><button data-mid="${esc(x.id)}"><b>${esc(x.title)}${m ? `<small>${m}</small>` : ''}</b><span class="num">${yen(wishOf(x))}</span></button></li>`; }).join('') || '<li class="hint">「ほしい」にした作品や、持ってない巻に値段を入れるとここにまとまる。</li>';
@@ -1337,13 +1350,14 @@ function openRerate(x) {
 
 /* ===== 設定 ===== */
 function drawSettings() {
+  $('#ver').textContent = `　${VER}`;
   setSw('#todSw', S.set.tod); setSw('#moneySw', S.set.money); setSw('#dustSw', S.set.dust);
   $('#roomTg').innerHTML = ORDER.map((k) => `<button type="button" class="chip${S.set.hidden.includes(k) ? '' : ' on'}" data-room="${k}">${CATS[k].short || CATS[k].name}</button>`).join('');
   $('#moneyG').hidden = !S.set.money;
   if (S.set.money) {
     const yrs = new Map();
-    for (const x of S.items) for (const [t, p] of spends(x)) { const yy = new Date(t).getFullYear(), m = yrs.get(yy) || {}; m[x.cat] = (m[x.cat] || 0) + p; yrs.set(yy, m); }
-    $('#ytable').innerHTML = yrs.size ? [...yrs].sort((a, b) => b[0] - a[0]).map(([yy, m]) => `<tr><td>${yy}年<br><small class="hint">${ORDER.filter((k) => m[k]).map((k) => `${CATS[k].name} ${yen(m[k])}`).join('・')}</small></td><td>${yen(Object.values(m).reduce((s, p) => s + p, 0))}</td></tr>`).join('') : '<tr><td class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</td><td></td></tr>';
+    for (const x of S.items) for (const [t, p] of spends(x)) { const yy = t ? new Date(t).getFullYear() : 0, m = yrs.get(yy) || {}; m[x.cat] = (m[x.cat] || 0) + p; yrs.set(yy, m); }
+    $('#ytable').innerHTML = yrs.size ? [...yrs].sort((a, b) => (b[0] || -1) - (a[0] || -1)).map(([yy, m]) => `<tr><td>${yy ? `${yy}年` : '時期不明'}<br><small class="hint">${ORDER.filter((k) => m[k]).map((k) => `${CATS[k].name} ${yen(m[k])}`).join('・')}</small></td><td>${yen(Object.values(m).reduce((s, p) => s + p, 0))}</td></tr>`).join('') : '<tr><td class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</td><td></td></tr>';
   }
   const imgs = S.items.reduce((s, x) => s + imgKeys(x).length, 0);
   const d = S.lastBackup ? Math.floor((Date.now() - S.lastBackup) / 864e5) : null;
@@ -1511,7 +1525,8 @@ document.addEventListener('click', (e) => {
     }
     void C;
   }
-  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } drawStSeg(); drawWhen(); return; }
+  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } if (draft.old && draft.status === 'done') draft.wm = 'none'; drawStSeg(); drawWhen(); drawBuy(); return; }
+  const bu = t.closest('#buySeg [data-buy]'); if (bu) { draft.buy = bu.dataset.buy; drawBuy(); if (draft.buy === 'year') setTimeout(() => $('#fEdit').buyY.focus(), 50); return; }
   const wmb = t.closest('[data-wm]'); if (wmb) { const box = wmb.closest('.whenui'), st = box.id === 'whenUI' ? draft : doneCtx; if (!st) return; st.date = readWhen(box, st) || st.date; st.wm = wmb.dataset.wm; drawWhenUI(box, st); return; }
   const es = t.closest('#editRate [data-estar]'); if (es) { const i = +es.dataset.estar; draft.rating = draft.rating === i ? i - 0.5 : i; drawEditRate(); $(`#editRate [data-estar="${i}"]`).classList.add('pop'); return; }
   const xs = t.closest('#editExp [data-xstar]'); if (xs) { const i = +xs.dataset.xstar; draft.exp = draft.exp === i ? i - 0.5 : i; drawEditRate(); $(`#editExp [data-xstar="${i}"]`).classList.add('pop'); return; }
@@ -1654,6 +1669,11 @@ $('#serSw').addEventListener('click', () => { draft.series = !draft.series; setS
 $('#fEdit').tags.addEventListener('input', () => { if (!$('#tagPick').hidden) drawTagPick(); });
 $('#fEdit').genre.addEventListener('input', () => drawMusicF());
 $('#doneSw').addEventListener('click', () => { draft.done = !draft.done; setSw('#doneSw', draft.done); });
+$('#oldSw').addEventListener('click', () => {
+  draft.old = !draft.old; setSw('#oldSw', draft.old); if (!draft.id) ui.oldDef = draft.old;
+  if (draft.old) { draft.buy = 'unk'; if (draft.status === 'done') draft.wm = 'none'; } else { draft.buy = 'now'; if (draft.wm === 'none') draft.wm = 'today'; }
+  drawWhen(); drawBuy();
+});
 $('#volCvSw').addEventListener('click', () => { const x = vol && findItem(vol.id); if (!x) return; x.coverVol = x.coverVol === vol.n ? 0 : vol.n; touch(x); setSw('#volCvSw', x.coverVol === vol.n); toast(x.coverVol ? `${Cx(x).volN(vol.n)}を表紙にした` : '表紙を元に戻した'); });
 $('#volOwnSw').addEventListener('click', () => { const x = vol && findItem(vol.id); if (!x) return; const d = vget(x, vol.n); if (!x.ownOn) { x.ownOn = true; for (let i = 1; i <= x.cur; i++) vget(x, i).o = 1; } if (d.o) delete d.o; else { d.o = 1; logEv(x, 'buy', vol.n); } touch(x); setSw('#volOwnSw', owned(x, vol.n)); });
 const togg = (k) => () => { S.set[k] = !S.set[k]; save(); drawSettings(); render(); };
@@ -1673,7 +1693,12 @@ let tt;
 function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2400); }
 
 render(true);
-if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
+  const had = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => { document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => {}); }); }).catch(() => {});
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (had && !reloaded && !$('dialog[open]') && $('#page').hidden) { reloaded = true; location.reload(); } });
+}
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
 window.__k = { S: () => S, render, gen: genHTML };
 })();

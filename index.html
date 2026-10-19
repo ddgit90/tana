@@ -91,6 +91,7 @@
     <label class="f">会期（いつまで）<input name="until" type="date"></label>
   </div>
 
+  <div class="tg grp" id="oldRow"><span id="oldL">前から持ってる・前に読んだもの<small>読んだ日や買った時期は「覚えてない」になって、今年の記録や年ごとの合計に入らない</small></span><button type="button" class="sw2" id="oldSw" role="switch" aria-checked="false" aria-label="前からのもの"></button></div>
   <div class="grp">
     <span class="gt">状態</span>
     <div class="seg" id="stSeg"></div>
@@ -145,6 +146,7 @@
       </div>
     </div>
     <label class="f" id="priceF"><span id="priceL">値段（円）</span><input name="price" inputmode="numeric" autocomplete="off" maxlength="9" placeholder="例：1200"></label>
+    <div id="buyF"><span class="hint">買った時期</span><div class="seg sm" id="buySeg" style="margin-top:6px"><button type="button" data-buy="now">最近（今日）</button><button type="button" data-buy="year">年を入れる</button><button type="button" data-buy="unk">覚えてない</button></div><label class="f" id="buyYF" style="margin-top:8px"><input name="buyY" inputmode="numeric" maxlength="4" placeholder="例：2019" aria-label="買った年"></label></div>
     <div class="r2" id="liveMoney"><label class="f">グッズ（円）<input name="gp" inputmode="numeric" autocomplete="off" maxlength="9"></label><label class="f">遠征費（交通・宿）<input name="tp" inputmode="numeric" autocomplete="off" maxlength="9"></label></div>
   </div>
   <label class="f" id="priceArtF">値段（円・チケット代など）<input name="priceArt" inputmode="numeric" autocomplete="off" maxlength="9"></label>
@@ -277,7 +279,7 @@
 
 <!-- 設定 -->
 <dialog id="dSet"><div class="sh">
-  <h3>設定</h3>
+  <h3>設定<small class="ver" id="ver"></small></h3>
   <div class="grp">
     <div class="tg"><span>時間で部屋の明かりが変わる<small>夜（19時〜朝6時）は照明を落とす。芸術の部屋は暗い展示室になる</small></span><button type="button" class="sw2" id="todSw" role="switch" aria-checked="false" aria-label="時間で明かりが変わる"></button></div>
     <div class="tg"><span>ほこり<small>しばらく触ってない「途中」の作品に、うっすらほこりが積もる</small></span><button type="button" class="sw2" id="dustSw" role="switch" aria-checked="false" aria-label="ほこり"></button></div>
