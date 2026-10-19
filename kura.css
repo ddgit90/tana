@@ -70,13 +70,13 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .chips.tags .chip{height:30px;font-size:12.5px;padding:0 11px}
 .chips.tags .chip.on{background:var(--ink);border-color:var(--ink);color:var(--room)}
 
-.tools{display:grid;grid-template-columns:1fr auto;grid-template-areas:"s s" "o v";gap:10px 8px;align-items:center;margin:4px 0 20px}
+.tools{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:"s s s" "o f v";gap:10px 8px;align-items:center;margin:4px 0 20px}
 .sbox{grid-area:s;position:relative;min-width:0}
 .search{width:100%;height:40px;padding:0 12px 0 36px;border-radius:20px;border:1px solid var(--line);background:var(--field);font-size:15px;color:var(--ink)}
 .search::placeholder{color:var(--sub)}
 .search:focus{outline:0;border-color:var(--acc)}
 .sbox svg{position:absolute;left:12px;top:12px;color:var(--sub)}
-.sortsel{grid-area:o;justify-self:start;height:40px;padding:0 28px 0 12px;border-radius:20px;border:1px solid var(--line);background:var(--field);font-size:12.5px;color:var(--ink)}
+.sortsel{grid-area:o;justify-self:start;width:104px;height:40px;padding:0 28px 0 12px;border-radius:20px;border:1px solid var(--line);background:var(--field);font-size:12.5px;color:var(--ink)}
 .sortsel option{color:#222}
 .views{grid-area:v;position:relative;display:flex;padding:3px;border-radius:20px;background:var(--field)}
 .views .vi{position:absolute;top:3px;left:3px;width:36px;height:34px;border-radius:17px;background:var(--acc);transition:transform .45s var(--spring)}
@@ -453,7 +453,7 @@ label.f select option{color:#222}
 label.f textarea{min-height:100px;resize:vertical;line-height:1.75}
 label.f input:focus,label.f textarea:focus{outline:0;border-color:var(--acc)}
 label.f input::placeholder,label.f textarea::placeholder{color:var(--sub);opacity:.7}
-.r2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.r2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .tg{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px}
 .tg small{display:block;font-size:12px;color:var(--sub)}
 .sw2{flex:none;width:48px;height:29px;border-radius:15px;background:var(--line);position:relative;transition:background .25s}
@@ -669,3 +669,43 @@ textarea.vc:focus{outline:0;border-color:var(--acc)}
 /* ===== v8 追加 ===== */
 #oldRow{padding:12px 14px}
 .sh h3 .ver{font:500 11px/1 var(--gothic);color:var(--sub)}
+
+/* ===== v9 追加 ===== */
+/* iPhoneの日付・月の入力欄がはみ出して重ならないように */
+label.f input,label.f select{min-width:0;max-width:100%}
+label.f input[type=date],label.f input[type=month],label.f input[type=time]{-webkit-appearance:none;appearance:none;display:block;line-height:24px;text-align:left}
+input::-webkit-date-and-time-value{text-align:left}
+.addrow{display:flex;align-items:center;gap:8px}
+.addrow .f{flex:1;min-width:0}
+.addrow .btn{flex:none;height:46px}
+.eprow{align-items:flex-end}
+/* タグ・ジャンルのボタン */
+.fbtn{grid-area:f;justify-self:start;max-width:100%;height:40px;padding:0 14px;border-radius:20px;border:1px solid var(--line);background:var(--field);font-size:12.5px;color:var(--ink);display:inline-flex;align-items:center;gap:6px;min-width:0}
+.fbtn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbtn i{font-style:normal;font-size:14px;opacity:.8}
+.fbtn.on{background:var(--ink);border-color:var(--ink);color:var(--room);font-weight:700}
+.fh{margin:6px 2px 8px;font-size:12px;color:var(--sub)}
+.fchips{display:flex;flex-wrap:wrap;gap:8px}
+#tpList{max-height:40dvh;overflow:auto}
+.fchips .chip{height:38px;font-size:14px;padding:0 14px}
+.fchips .chip small{margin-left:6px}
+#tpList .chip.on,.fchips .chip.on{background:var(--acc);border-color:var(--acc);color:var(--accInk);font-weight:700}
+.chip.md{border-style:dotted}
+.chip.md.on{border-style:solid}
+
+/* ===== v10 追加 ===== */
+.fhrow{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#fltB .fh{margin-top:14px}
+#fltB .fhrow .fh{margin-top:6px}
+.trows{display:grid;gap:6px}
+.trow{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.trow span{flex:1;min-width:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow small{margin-left:6px;font-weight:400;color:var(--sub);font-size:12px}
+.trow .btn{height:34px;padding:0 12px;font-size:12.5px}
+.fbtn{max-width:100%}
+.fbtn span{min-width:0;flex:1 1 auto}
+.fbtn i{flex:none}
+.fbar{display:flex;align-items:center;gap:6px;margin:-8px 0 16px;padding:8px 8px 8px 14px;border-radius:14px;background:var(--card);border:1px solid var(--acc);font-size:13.5px}
+.fbar span:first-child{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fbar .fbn{flex:1;min-width:0;color:var(--sub);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fbar button{flex:none;width:30px;height:30px;border-radius:50%;background:var(--field);font-size:15px}

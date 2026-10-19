@@ -30,6 +30,7 @@
   <div class="tools">
     <div class="sbox"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg><input class="search" id="q" type="search" placeholder="タイトル・よみ・名前・タグ" autocomplete="off" aria-label="検索"></div>
     <select class="sortsel" id="sort" aria-label="並べ替え"></select>
+    <button class="fbtn" id="fbtn" data-act="filt" aria-label="タグで絞り込む"></button>
     <div class="views" id="views" role="tablist" aria-label="表示">
       <span class="vi"></span>
       <button data-view="shelf" aria-label="棚"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><rect x="2" y="3" width="3" height="11" rx=".5"/><rect x="6" y="5" width="2.5" height="9" rx=".5"/><rect x="9.5" y="2" width="3" height="12" rx=".5"/><rect x="13" y="4" width="2.5" height="10" rx=".5"/><rect x="1" y="15" width="16" height="1.6" rx=".5"/></svg></button>
@@ -38,6 +39,7 @@
       <button data-view="rank" aria-label="ティア表"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><rect x="1.5" y="2" width="3.5" height="3.6" rx=".6"/><rect x="6" y="2" width="10.5" height="3.6" rx=".6" opacity=".45"/><rect x="1.5" y="7.2" width="3.5" height="3.6" rx=".6"/><rect x="6" y="7.2" width="7" height="3.6" rx=".6" opacity=".45"/><rect x="1.5" y="12.4" width="3.5" height="3.6" rx=".6"/><rect x="6" y="12.4" width="4" height="3.6" rx=".6" opacity=".45"/></svg></button>
     </div>
   </div>
+  <div class="fbar" id="fbar" hidden></div>
   <div id="list"></div>
 </div>
 
@@ -91,7 +93,7 @@
     <label class="f">会期（いつまで）<input name="until" type="date"></label>
   </div>
 
-  <div class="tg grp" id="oldRow"><span id="oldL">前から持ってる・前に読んだもの<small>読んだ日や買った時期は「覚えてない」になって、今年の記録や年ごとの合計に入らない</small></span><button type="button" class="sw2" id="oldSw" role="switch" aria-checked="false" aria-label="前からのもの"></button></div>
+  <div class="tg grp" id="oldRow"><span id="oldL">前から持ってる・前に読んだもの<small>日付や買った時期は「覚えてない」になって、今年の記録や年ごとの合計に入らない</small></span><button type="button" class="sw2" id="oldSw" role="switch" aria-checked="false" aria-label="前からのもの"></button></div>
   <div class="grp">
     <span class="gt">状態</span>
     <div class="seg" id="stSeg"></div>
@@ -158,9 +160,9 @@
     <div class="tagpick" id="linkChips"></div>
   </div>
   <div class="tagbox">
-    <div class="tagrow"><span class="hint">タグ</span><button type="button" class="tagopen" data-act="tagpick" id="tagPickB">登録したタグから選ぶ ▾</button></div>
-    <div class="tagpick" id="tagPick" hidden></div>
-    <label class="f"><input name="tags" autocomplete="off" maxlength="200" placeholder="新しいタグはここに（スペースか、で区切る）" aria-label="タグ"></label>
+    <div class="tagrow"><span class="hint">タグ</span><button type="button" class="tagopen" data-act="tagpick">＋ タグを選ぶ・つくる</button></div>
+    <div class="tagpick" id="tagSel"></div>
+    <input type="hidden" name="tags">
   </div>
   <div class="acts"><button type="button" class="btn dan" id="delBtn" data-act="delete">消す</button><button type="button" class="btn" data-act="close">やめる</button><button class="btn pri" value="ok">保存</button></div>
 </form></dialog>
@@ -259,6 +261,22 @@
   <div class="grp"><div class="wishhd"><span class="gt">ほしい物（買う前・合計には入らない）</span><b class="num" id="mnyWishN"></b></div><ul class="mtop" id="mnyTop"></ul></div>
   <p class="hint" id="mnyAll"></p>
   <button type="button" class="btn sm pri" data-act="close">閉じる</button>
+</div></dialog>
+
+<!-- 絞り込み（タグ・ジャンル） -->
+<dialog id="dFilt"><div class="sh">
+  <h3 id="fltT">タグで絞り込む</h3>
+  <div id="fltB"></div>
+  <div class="acts"><button type="button" class="btn" data-act="fltclear">絞り込みをやめる</button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
+</div></dialog>
+
+<!-- タグを選ぶ（追加・編集） -->
+<dialog id="dTagP"><div class="sh">
+  <h3>タグを選ぶ</h3>
+  <p class="hint">押すと付く。もう一度押すと外れる。</p>
+  <div class="fchips" id="tpList"></div>
+  <div class="addrow"><label class="f"><input id="tpNew" autocomplete="off" maxlength="20" placeholder="新しいタグ（例：泣ける）" aria-label="新しいタグ"></label><button type="button" class="btn sm" data-act="tpadd">つくる</button></div>
+  <button type="button" class="btn pri" data-act="close">決める</button>
 </div></dialog>
 
 <!-- 再評価 -->
