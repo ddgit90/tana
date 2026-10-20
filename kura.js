@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v20';
+const VER = 'v23';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,13 +51,21 @@ function relWord(x) {
   const next = ser ? (x.cat === 'manga' || x.cat === 'book' ? (ep ? '次の話' : '次の新刊') : `次の${volW(C)}`) : what;
   return { what, day: w[0], v: w[1], label: `${next}の${w[0]}（わかれば）` };
 }
+/* ===== 巻（話で読む漫画・本）／シーズン（アニメ）：話をまとめる箱 ===== */
+const partMode = (x) => (x.cat === 'anime' && x.series ? 'season' : (x.cat === 'manga' || x.cat === 'book') && x.series && x.unit === 'ep' ? 'vol' : '');
+const partNm = (x, i) => (partMode(x) === 'season' ? `${i}期` : `${i}巻`);
+function partsOf(x) { if (!Array.isArray(x.parts)) return []; let from = 1; return x.parts.map((p, i) => { const n = p.n || 0, r = { ...p, i: i + 1, name: p.name || partNm(x, i + 1), from, to: from + n - 1 }; from += n; return r; }); }
+const partOf = (x, k) => partsOf(x).find((p) => p.n && k >= p.from && k <= p.to);
+const partKey = (x, p) => `${x.id}~p${p.id}`;
+const seasoned = (x) => partMode(x) === 'season' && Array.isArray(x.parts) && x.parts.length > 0;
 function Cx(x) {
   const C = CATS[x.cat];
+  if (seasoned(x)) return { ...C, volN: (k) => { const p = partOf(x, k); return p ? `${p.name} 第${k - p.from + 1}話` : `第${k}話`; } };
   if (x.unit === 'ep' && (x.cat === 'manga' || x.cat === 'book')) return { ...C, vol: '話', volN: (n) => `第${n}話`, own: false, ser: { ...C.ser, have: '今', nw: '新しい話', volsL: '今出てる話数（わからなければ空でOK）', curL: '読んだところ（話）' } };
   return C;
 }
 /* 話数が多いものは、箱を並べずに「＋1話」中心の軽い表示にする */
-const light = (x) => !!x.series && (x.unit === 'ep' || (x.cat === 'anime' && x.vols > 60));
+const light = (x) => !!x.series && (x.unit === 'ep' || (x.cat === 'anime' && x.vols > 60 && !(Array.isArray(x.parts) && x.parts.length)));
 const visRooms = () => { const h = S.set.hidden || []; const v = ORDER.filter((k) => !h.includes(k)); return v.length ? v : ['manga']; };
 const PF = [[/switch|スイッチ/i, '#e4002b'], [/ps|プレステ|playstation/i, '#1f5fd1'], [/xbox/i, '#1a8a1a'], [/pc|steam/i, '#5b6170'], [/スマホ|ios|android|iphone/i, '#e8a020']];
 const pfColor = (p) => (PF.find(([r]) => r.test(p || '')) || [0, '#8a8fa3'])[1];
@@ -110,9 +118,11 @@ function fix(x) {
   if (!Array.isArray(x.fmt)) x.fmt = [];
   if (!Array.isArray(x.links)) x.links = [];
   if (typeof x.perf !== 'string') x.perf = '';
+  if (x.parts != null && !Array.isArray(x.parts)) delete x.parts;
+  if (x.unit === 'ep' && x.series && !x.parts && Array.isArray(x.ownB) && x.ownB.length) { const mx = Math.min(Math.max(...x.ownB), 500); x.parts = Array.from({ length: mx }, (_, i) => ({ id: uid(), n: 0, own: x.ownB.includes(i + 1) })); }
   return x;
 }
-function save() { try { syncSingles(); } catch (e) { console.error(e); } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存できなかった（保存領域がいっぱいかも）'); } }
+function save() { try { syncSingles(); } catch (e) { console.error(e); } try { syncParts(); } catch (e) { console.error(e); } try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存できなかった（保存領域がいっぱいかも）'); } }
 const ui = { filter: 'all', media: '', F: {}, Ft: null, open: new Set((() => { try { return JSON.parse(localStorage['kura.open'] || '[]'); } catch (e) { return []; } })()), adv: false, fk: '', fv: '', tagEdit: false, q: '', tag: '', tagOpen: false, kind: '', genre: '', genreOpen: false, byear: new Date().getFullYear(), rtab: 'tier', vmode: 'open', tow: 'stack' };
 
 /* 写真（IndexedDB）。作品の写真は「id」、巻の写真は「id~巻」で保存 */
@@ -144,8 +154,8 @@ async function hydrate(root = document) {
     if (g) g.replaceWith(im); else el.prepend(im);
   }
 }
-const imgKeys = (x) => [x.img ? x.id : null, ...Object.entries(x.v || {}).filter(([, d]) => d && d.img).map(([n]) => `${x.id}~${n}`)].filter(Boolean);
-const imgKey = (x) => x._alb ? ((x._alb.v[x._n] || {}).img ? x.id : imgKey(x._alb)) : (x.coverVol && x.v[x.coverVol] && x.v[x.coverVol].img ? `${x.id}~${x.coverVol}` : x.img ? x.id : '');
+const imgKeys = (x) => [x.img ? x.id : null, ...Object.entries(x.v || {}).filter(([, d]) => d && d.img).map(([n]) => `${x.id}~${n}`), ...(x.parts || []).filter((p) => p.img).map((p) => `${x.id}~p${p.id}`)].filter(Boolean);
+const imgKey = (x) => x._alb ? ((x._alb.v[x._n] || {}).img ? x.id : imgKey(x._alb)) : (x.coverPart && (x.parts || []).some((p) => p.id === x.coverPart && p.img) ? `${x.id}~p${x.coverPart}` : x.coverVol && x.v[x.coverVol] && x.v[x.coverVol].img ? `${x.id}~${x.coverVol}` : x.img ? x.id : '');
 function avgColor(c) {
   const t = document.createElement('canvas'); t.width = t.height = 8; const tx = t.getContext('2d'); tx.drawImage(c, 0, 0, 8, 8);
   const d = tx.getImageData(0, 0, 8, 8).data; let r = 0, g = 0, b = 0; for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2]; }
@@ -255,7 +265,8 @@ const missing = (x) => { const m = []; for (let i = 1; i <= x.vols; i++) if (!ow
 const volRates = (x) => Object.entries(x.v).filter(([k, d]) => d && d.r > 0 && (!x.vols || +k <= x.vols)).map(([, d]) => d.r);
 const volAvg = (x) => { const a = volRates(x); return a.length ? Math.round(a.reduce((s, r) => s + r, 0) / a.length * 10) / 10 : 0; };
 /* 表に出す評価：シリーズは巻ごとの平均（自分で決めたらそっち） */
-function rt(x) { if (x.series && !x.rateFix) { const a = volAvg(x); if (a) return a; } return x.rating || 0; }
+const partAvg = (x) => { if (!partMode(x)) return 0; const a = (x.parts || []).map((p) => p.r).filter((r) => r > 0); return a.length ? Math.round(a.reduce((q, r) => q + r, 0) / a.length * 10) / 10 : 0; };
+function rt(x) { if (x.series && !x.rateFix) { const pa = partAvg(x); if (pa) return pa; const a = volAvg(x); if (a) return a; } return x.rating || 0; }
 function frac(x) {
   if (x.cat === 'music') return null;
   if (x.series && x.vols) return Math.min(1, x.cur / x.vols);
@@ -375,12 +386,15 @@ function spends(x) {
   if (x.gp) o.push([tt(x.pt), x.gp, x.status]);
   if (x.tp) o.push([tt(x.pt), x.tp, x.status]);
   for (const [k, d] of Object.entries(x.v)) if (d && d.p && !(x.ownOn && !d.o)) o.push([tt(d.pt), d.p, x.series ? (+k <= x.cur ? 'done' : x.status === 'pause' ? 'pause' : 'none') : x.status]);
+  /* 巻（話で読むとき）は「持ってる」にした巻だけ。シーズンは払った分 */
+  const pm = partMode(x); if (pm) for (const q of partsOf(x)) if (q.p && (pm === 'season' || q.own)) o.push([tt(q.pt), q.p, q.n && x.cur >= q.to ? 'done' : x.status === 'pause' ? 'pause' : 'none']);
   return o;
 }
 const spentList = (list) => list.reduce((s, x) => s + spentAll(x), 0);
 const spentAll = (x) => spends(x).reduce((a, [, p]) => a + p, 0);
 /* ほしい物・持ってない巻の値段（買う前） */
-const wishOf = (x) => (x.want ? (x.price || 0) + Object.values(x.v).reduce((a, d) => a + ((d && d.p) || 0), 0) : Object.values(x.v).reduce((a, d) => a + (x.ownOn && d && d.p && !d.o ? d.p : 0), 0));
+const partWish = (x) => (partMode(x) === 'vol' ? (x.parts || []).reduce((a, q) => a + (q.want && q.p ? q.p : 0), 0) : 0);
+const wishOf = (x) => partWish(x) + (x.want ? (x.price || 0) + Object.values(x.v).reduce((a, d) => a + ((d && d.p) || 0), 0) : Object.values(x.v).reduce((a, d) => a + (x.ownOn && d && d.p && !d.o ? d.p : 0), 0));
 
 /* ===== ティア ===== */
 function inTier(list, t) {
@@ -671,6 +685,7 @@ function nextGroups(cat) {
     return g;
   }
   const ser = a.filter((x) => x.series && (x.vols || x.unit === 'ep') && x.status !== 'pause');
+  if (cat === 'manga' || cat === 'book') take('ほしい巻', '話で読んでる作品', a.filter((x) => partMode(x) === 'vol' && (x.parts || []).some((q) => q.want)).sort((x, y) => y.updated - x.updated), 'pwant');
   if (C.own) take('次に買う', `持ってない${volW(C)}`, ser.filter((x) => x.ownOn && missing(x).length).sort(upd), 'buy');
   take(cat === 'manga' || cat === 'book' ? '続きを読む' : cat === 'anime' ? '続きを観る' : 'シリーズの続き', '', ser.filter((x) => canRead(x) && !x.want && !(x.status === 'done' && x.done)).sort(upd), 'cont');
   take(cat === 'game' ? 'プレイ中' : '途中', '', a.filter((x) => x.status === 'doing' && !x.series).sort(upd), 'doing');
@@ -700,6 +715,7 @@ function drawNext() {
       line = esc([x.creator, x.place].filter(Boolean).join('　')) || '　';
       if (x.until) { const d = dayDiff(x.until); due = `<span class="due${d <= 14 ? ' soon' : ''}">${d === 0 ? '今日' : d}<small>${d === 0 ? 'まで' : '日後まで'}<br>${x.until.slice(5).replace('-', '/')}</small></span>`; }
     } else if (g.kind === 'doing') line = esc(progText(x) || meta(x) || stLabel(x.cat, x.status)) + (dustLv(x) ? '　<em>ほこりをかぶってる</em>' : '');
+    else if (g.kind === 'pwant') { const w = partsOf(x).filter((q) => q.want), sum = w.reduce((t, q) => t + (q.p || 0), 0); line = `<em>${esc(rangeText(w.map((q) => q.i)))}巻</em>${S.set.money && sum ? `　${yen(sum)}` : ''}　${esc(meta(x))}`; }
     else if (g.kind === 'want' && x.media) line = `<em>${esc(wantForm(x))}</em>　${esc(meta(x))}`;
     else line = esc(meta(x)) || esc(stLabel(x.cat, x.status));
     return `<div class="nrow" style="--i:${Math.min(i++, 30)}"><button class="open" data-oid="${esc(x.id)}"><span class="th">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${line}</small></span></button>${act}${due}</div>`;
@@ -788,7 +804,7 @@ function renderPage(x) {
       <div class="sec"><h4>評価（同じ星をもう一度押すと半分）</h4><div class="rate" id="pRate"></div><div id="pAvg"></div>${rt(x) > 0 ? '<button class="lnk rerate" data-act="rerate">再評価する</button>' : ''}</div>
       ${x.rel ? relHTML(x) : ''}
       ${mus ? musicHTML(x) : ''}
-      ${x.series && !art && !mus ? `<div class="sec"><h4>シリーズ</h4><div class="box" id="pVols"></div></div>` : ''}
+      ${x.series && !art && !mus ? `<div class="sec"><h4>シリーズ</h4><div class="box" id="pVols"></div><div id="pParts"></div></div>` : ''}
       ${prog ? `<div class="sec"><h4>進み具合</h4><div class="box" id="pProg"></div></div>` : ''}
       ${x.review ? `<div class="sec"><h4>感想</h4><div class="box"><p class="txt">${linkify(x.review)}</p></div></div>` : ''}
       ${x.memo ? `<div class="sec"><h4>メモ</h4><div class="box"><p class="txt" style="font-family:var(--gothic);font-size:14.5px">${linkify(x.memo)}</p></div></div>` : ''}
@@ -835,14 +851,15 @@ function drawRate(x) {
   }
   $('#pAvg').innerHTML = h;
 }
-function drawVols(x, just) {
+function drawVols(x, just) { drawVols0(x, just); drawParts(x); }
+function drawVols0(x, just) {
   const C = Cx(x), u = C.vol, n = x.vols || 0, ser = C.ser;
   if (light(x)) {
     let h = `<div class="vhead"><span><b class="num">${x.cur}</b> <small>${n ? `/ ${n}${u}` : `${u}まで${C.did}`}${x.done ? `（${ser.fin}）` : ''}</small></span><span class="step"><button data-vstep="-1" aria-label="1つ戻す">−1</button></span></div>`;
     if (n) h += `<div class="vbar"><i style="width:${Math.min(100, x.cur / n * 100)}%"></i></div>`;
     h += `<button class="btn pri epplus" data-vstep="1">＋1${u}<small>${C.volN(x.cur + 1)}を${C.did}</small></button>`;
     h += `<div class="eprow"><label class="f">まとめて入れる<input id="epSet" inputmode="numeric" placeholder="${x.cur}"></label><button class="btn sm" data-act="epset">決める</button>${x.cur ? `<button class="btn sm" data-act="epmemo">${C.volN(x.cur)}にメモ</button>` : ''}</div>`;
-    if (x.ownB && x.ownB.length) h += `<div class="vrow2"><span>持ってる単行本</span><span>${esc(rangeText(x.ownB))}巻</span></div>`;
+    if (x.ownB && x.ownB.length && !partMode(x)) h += `<div class="vrow2"><span>持ってる単行本</span><span>${esc(rangeText(x.ownB))}巻</span></div>`;
     $('#pVols').innerHTML = h; return;
   }
   const modes = [['open', '詳しく見る'], ['read', '進める'], ...(C.own ? [['own', '持ってる']] : [])];
@@ -851,7 +868,8 @@ function drawVols(x, just) {
   let h = `<div class="vhead"><span><b class="num">${x.cur}</b> <small>/ ${n ? (x.done ? `全${n}${u}（${ser.fin}）` : `${ser.have}${n}${u}（${ser.on}）`) : `?${u}`}</small></span><span class="step"><button data-vstep="-1" aria-label="1つ戻す">−</button><button data-vstep="1" aria-label="1つ進める">＋</button></span></div>`;
   if (n) h += `<div class="seg sm" style="margin-top:12px">${modes.map(([k, l]) => `<button data-vm="${k}" class="${ui.vmode === k ? 'on' : ''}">${l}</button>`).join('')}</div><p class="hint" style="margin-top:6px">${hint}</p>`;
   if (n && n <= 300) {
-    h += `<div class="vshelf">${Array.from({ length: n }, (_, k) => { const i = k + 1, d = x.v[i] || {}; const cls = [i <= x.cur ? 'rd' : x.ownOn ? (owned(x, i) ? 'own' : 'no') : '', x.coverVol === i ? 'cvr' : '', d.r || d.c || d.img ? 'has' : '', just === i ? 'just' : ''].filter(Boolean).join(' '); return `<button data-vol="${i}" class="${cls}" aria-label="${C.volN(i)}">${i}</button>`; }).join('')}${!x.done ? `<button class="plus" data-act="volplus" aria-label="${ser.nw}を足す">＋</button>` : ''}</div>` +
+    const SP = seasoned(x) ? partsOf(x) : null;
+    h += `<div class="vshelf">${Array.from({ length: n }, (_, k) => { const i = k + 1, d = x.v[i] || {}, sp = SP && SP.find((q) => q.n && q.from === i), lab = SP ? (partOf(x, i) ? i - partOf(x, i).from + 1 : i) : i; const cls = [i <= x.cur ? 'rd' : x.ownOn ? (owned(x, i) ? 'own' : 'no') : '', x.coverVol === i ? 'cvr' : '', d.r || d.c || d.img ? 'has' : '', just === i ? 'just' : ''].filter(Boolean).join(' '); return `${sp ? `<span class="vsep">${esc(sp.name)}</span>` : ''}<button data-vol="${i}" class="${cls}" aria-label="${C.volN(i)}">${lab}</button>`; }).join('')}${!x.done ? `<button class="plus" data-act="volplus" aria-label="${ser.nw}を足す">＋</button>` : ''}</div>` +
       `<div class="legend"><span><i class="a"></i>${C.did}</span>${x.ownOn ? '<span><i class="b"></i>持ってる</span><span><i class="c"></i>持ってない</span>' : ''}<span><i class="d"></i>感想・評価あり</span></div>`;
   } else if (n) h += `<div class="r2" style="margin-top:12px"><label class="f">${u}を開く<input id="vjump" inputmode="numeric" placeholder="1〜${n}"></label><button class="btn sm" data-act="vjump" style="align-self:end">開く</button></div>`;
   if (x.ownOn) { const m = missing(x); h += `<div class="vrow2"><span>持ってる <b class="num">${ownN(x)}</b>/ ${n}${u}</span><span>${m.length ? `持ってない：${shortList(m, u)}` : '全部そろってる'}</span></div>`; }
@@ -860,6 +878,118 @@ function drawVols(x, just) {
   if (n && !x.done && n > 300) h += `<button class="btn sm" data-act="volplus" style="margin-top:12px">${ser.nw}が出た（＋1）</button>`;
   if (!n) h += `<p class="hint" style="margin-top:10px">「編集」で${ser.volsL}を入れると、${u}ごとに記録できる。</p>`;
   $('#pVols').innerHTML = h;
+}
+/* ===== 巻・シーズンの一覧（作品のページ） ===== */
+function syncParts() {
+  for (const x of S.items) {
+    if (!Array.isArray(x.parts) || !x.parts.length) continue;
+    const m = partMode(x);
+    if (m === 'season') {
+      const tot = x.parts.reduce((q, p) => q + (p.n || 0), 0), last = x.parts[x.parts.length - 1];
+      if ((x.vols || 0) > tot) last.n = (last.n || 0) + x.vols - tot; else x.vols = tot;
+      for (const p of partsOf(x)) if (p.n && x.cur >= p.to && !x.parts[p.i - 1].date) x.parts[p.i - 1].date = today();
+    } else if (m === 'vol') x.ownB = partsOf(x).filter((p) => p.own).map((p) => p.i);
+  }
+}
+function drawParts(x) {
+  const el = $('#pParts'); if (!el) return;
+  const m = partMode(x); if (!m) { el.innerHTML = ''; return; }
+  const P = partsOf(x), sea = m === 'season';
+  let h = `<div class="parts-h"><b>${sea ? 'シーズン' : '巻（単行本）'}</b><button class="lnk" data-act="partadd">＋ ${sea ? 'シーズン' : '巻'}を足す</button></div>`;
+  if (!P.length) h += `<p class="hint">${sea ? '1つの作品の中に「1期・2期…」を作れる。シーズンごとに表紙・評価・感想・話数を持てて、話はシーズンごとに第1話から数える。劇場版は映画の部屋に入れて「関連」でつなぐ。' : '話で読みつつ、単行本の巻ごとに表紙・評価・感想、持ってる／ほしいを残せる。「1巻あたりの話数」を入れると、何話がどの巻に入ってるか自動で分ける。'}</p>`;
+  if (!sea) h += `<div class="pvset"><label class="f">1巻あたりの話数<input id="perVol" inputmode="numeric" value="${x.perVol || ''}" placeholder="例：9"></label><label class="f">今出てる巻数<input id="volUpto" inputmode="numeric" value="${P.length || ''}" placeholder="例：12"></label><button class="btn sm" data-act="partauto">決める</button></div>`;
+  if (P.length) h += `<div class="pstrip">${P.map((p) => partCard(x, p, sea)).join('')}</div>`;
+  if (sea) h += `<button class="lnk" data-act="partmerge" style="margin-top:10px">別に登録したシーズンを取り込む</button>`;
+  else { const w = P.filter((p) => p.want), o = P.filter((p) => p.own), ys = (l) => (S.set.money && l.some((p) => p.p) ? `（${yen(l.reduce((t, p) => t + (p.p || 0), 0))}）` : ''); if (P.length) h += `<p class="hint" style="margin-top:8px">${o.length ? `持ってる：${esc(rangeText(o.map((p) => p.i)))}巻${ys(o)}` : '持ってる巻はまだなし'}${w.length ? `　ほしい：${esc(rangeText(w.map((p) => p.i)))}巻${ys(w)}` : ''}</p>`; }
+  el.innerHTML = `<div class="box parts">${h}</div>`; hydrate(el);
+}
+function partPh(x, p) {
+  const k = p.img ? partKey(x, p) : '';
+  const g = x.cat === 'anime' ? genHTML({ ...x, season: p.name, coverVol: 0 }) : genHTML(x, p.i);
+  return `<div class="ph"${k ? ` data-img="${esc(k)}"` : ''}>${g}</div>`;
+}
+function partCard(x, p, sea) {
+  const done = p.n > 0 && x.cur >= p.to, prog = p.n ? clamp(x.cur - p.from + 1, 0, p.n) : 0;
+  const tag = sea ? (p.n ? (done ? '観た' : prog ? `${prog}/${p.n}話` : `${p.n}話`) : '') : [done ? '読んだ' : '', p.own ? '持ってる' : p.want ? 'ほしい' : ''].filter(Boolean).join('・');
+  return `<button class="pcard${p.want ? ' want' : ''}${done ? ' done' : ''}${x.coverPart === p.id ? ' cvr' : ''}" data-part="${p.i}"><span class="pth vt">${partPh(x, p)}</span><b>${esc(p.name)}</b><small>${p.r ? `<em>★${p.r}</em>` : ''}${esc(tag) || '&nbsp;'}</small></button>`;
+}
+/* 巻・シーズンのシート */
+let part = null;
+function openPart(x, i) { part = { id: x.id, i }; drawPartSheet(); if (!$('#dPart').open) $('#dPart').showModal(); }
+const curPart = () => { const x = part && findItem(part.id); if (!x || !x.parts || !x.parts[part.i - 1]) return null; return { x, p: x.parts[part.i - 1], P: partsOf(x)[part.i - 1] }; };
+async function drawPartSheet() {
+  const c = curPart(); if (!c) return; const { x, p, P } = c, sea = partMode(x) === 'season';
+  $('#ptT').textContent = P.name; $('#ptName').value = p.name || ''; $('#ptName').placeholder = partNm(x, P.i);
+  $('#ptRate').innerHTML = rateHTML(p.r || 0, 'ptstar', 'ptrateclear');
+  $('#ptC').value = p.c || ''; $('#ptC').placeholder = `${P.name}の感想・メモ`;
+  $('#ptN').value = p.n || ''; $('#ptNL').textContent = sea ? 'このシーズンの話数' : 'この巻に入ってる話数';
+  $('#ptRange').textContent = p.n ? `第${P.from}〜${P.to}話${sea ? `（このシーズンでは第1〜${p.n}話）` : ''}` : (sea ? '話数を入れると、話ごとに記録できる。観て進めると自動で増える。' : '話数を入れると、どの話がこの巻に入ってるか分かる。');
+  $('#ptOwnRow').hidden = sea; $('#ptOwnSeg').innerHTML = [['no', '持ってない'], ['own', '持ってる'], ['want', 'ほしい']].map(([k, l]) => `<button type="button" data-pown="${k}" class="${(p.own ? 'own' : p.want ? 'want' : 'no') === k ? 'on' : ''}">${l}</button>`).join('');
+  $('#ptDateF').hidden = !sea; $('#ptDate').value = p.date || '';
+  $('#ptPriceF').hidden = !S.set.money; $('#ptPrice').value = p.p || ''; $('#ptPriceL').textContent = sea ? '払ったお金（円・円盤やレンタルなど。なければ空）' : `この巻の値段（円）${p.own ? '' : p.want ? '　※ほしいの間は合計に入らない' : '　※「持ってる」にすると合計に入る'}`;
+  $('#ptDel').textContent = sea ? 'このシーズンを消す' : 'この巻を消す';
+  setSw('#ptCvSw', x.coverPart === p.id); $('#ptRm').hidden = !p.img;
+  const eps = []; if (p.n) for (let k = P.from; k <= P.to; k++) { const d = x.v[k]; if (d && (d.r || d.c)) eps.push([k, d]); }
+  $('#ptEps').innerHTML = eps.length ? `<h4 class="fh">この${sea ? 'シーズン' : '巻'}の話の感想（${eps.length}）</h4><ul class="pteps">${eps.map(([k, d]) => `<li><button data-vopen="${k}"><b>${esc(sea ? `第${k - P.from + 1}話` : `第${k}話`)}</b>${d.r ? `<span class="num">★${d.r}</span>` : ''}${d.c ? `<small>${esc(d.c)}</small>` : ''}</button></li>`).join('')}</ul>` : '';
+  const pv = $('#ptPv'); pv.innerHTML = partPh(x, P); hydrate(pv);
+}
+/* アニメのシーズンの話数を変えたとき、後ろのシーズンの話の記録をずらす（写真も） */
+async function shiftEps(x, after, delta, dropFrom) {
+  const keys = Object.keys(x.v).map(Number).filter((k) => k > after || (dropFrom != null && k >= dropFrom && k <= after));
+  const nv = {}; for (const [k, d] of Object.entries(x.v)) if (!keys.includes(+k)) nv[k] = d;
+  const moves = [];
+  for (const k of keys) { const d = x.v[k]; if (dropFrom != null && k >= dropFrom && k <= after) { if (d && d.img) { idb.del(`${x.id}~${k}`).catch(() => {}); forget(`${x.id}~${k}`); } continue; } nv[k + delta] = d; if (d && d.img) moves.push([k, k + delta]); }
+  x.v = nv;
+  moves.sort((a, b) => (delta > 0 ? b[0] - a[0] : a[0] - b[0]));
+  for (const [a, b] of moves) { try { const bl = await idb.get(`${x.id}~${a}`); if (bl) { await idb.set(`${x.id}~${b}`, bl); await idb.del(`${x.id}~${a}`); } forget(`${x.id}~${a}`); forget(`${x.id}~${b}`); } catch (e) {} }
+  if (x.coverVol) { if (x.coverVol > after) x.coverVol += delta; else if (dropFrom != null && x.coverVol >= dropFrom) x.coverVol = 0; }
+  if (x.cur > after) x.cur = Math.max(0, x.cur + delta); else if (dropFrom != null && x.cur >= dropFrom) x.cur = dropFrom - 1;
+}
+async function setPartN(x, i, n) {
+  const p = x.parts[i - 1], P = partsOf(x)[i - 1], old = p.n || 0; if (n === old) return;
+  if (partMode(x) === 'season' && i < x.parts.length) {
+    const delta = n - old;
+    if (delta < 0) { const lost = []; for (let k = P.from + n; k <= P.to; k++) { const d = x.v[k]; if (d && (d.r || d.c || d.img)) lost.push(k); } if (lost.length && !confirm(`減らした分の${lost.length}話の評価・感想が消える。いい？`)) { drawPartSheet(); return; } await shiftEps(x, P.to, delta, P.from + n); }
+    else await shiftEps(x, P.to, delta);
+  } else if (partMode(x) === 'season' && n < old) { for (let k = P.from + n; k <= P.to; k++) { const d = x.v[k]; if (d && d.img) { idb.del(`${x.id}~${k}`).catch(() => {}); forget(`${x.id}~${k}`); } delete x.v[k]; } if (x.cur > P.from + n - 1) x.cur = P.from + n - 1; }
+  p.n = n;
+  if (partMode(x) === 'season') { x.vols = x.parts.reduce((q, r) => q + (r.n || 0), 0); if (n > old) x.done = false; }
+}
+async function delPart(x, i) {
+  const p = x.parts[i - 1], P = partsOf(x)[i - 1];
+  if (partMode(x) === 'season' && p.n) await shiftEps(x, P.to, -p.n, P.from);
+  if (p.img) { idb.del(partKey(x, p)).catch(() => {}); forget(partKey(x, p)); }
+  if (x.coverPart === p.id) x.coverPart = '';
+  x.parts.splice(i - 1, 1);
+  if (partMode(x) === 'season') x.vols = x.parts.reduce((q, r) => q + (r.n || 0), 0);
+}
+function addPart(x) {
+  x.parts = x.parts || [];
+  if (partMode(x) === 'season') {
+    if (!x.parts.length && x.vols > 0) { x.parts.push({ id: uid(), n: x.vols, r: x.rating || 0, date: x.status === 'done' ? x.date || '' : '' }); toast('今までの話は「1期」にまとめた'); }
+    x.parts.push({ id: uid(), n: 0 }); x.done = false;
+  } else x.parts.push({ id: uid(), n: x.perVol || 0 });
+  return x.parts.length;
+}
+/* 別に登録したシーズンを、この作品のシーズンとして取り込む */
+async function mergeSeasons(x, list) {
+  if (!x.parts || !x.parts.length) { x.parts = [{ id: uid(), n: x.vols || 0, r: rt(x) || 0, date: x.status === 'done' ? x.date || '' : '' }]; }
+  const strip = (t) => { const a = norm(x.title); let r = String(t); if (norm(r).startsWith(a)) r = r.slice(x.title.length); return r.replace(/^[\s　:：\-－~〜・]+/, '').trim(); };
+  for (const o of list.sort((a, b) => (+a.year || 9999) - (+b.year || 9999) || a.created - b.created)) {
+    const base = x.parts.reduce((q, r) => q + (r.n || 0), 0), on = o.series ? Math.min(o.vols || 0, 2000) : 0, pid = uid();
+    for (let k = 1; k <= on; k++) { const d = o.v[k]; if (!d) continue; x.v[base + k] = JSON.parse(JSON.stringify(d)); if (d.img) { try { const b = await idb.get(`${o.id}~${k}`); if (b) await idb.set(`${x.id}~${base + k}`, b); } catch (e) {} } }
+    let img = false; if (o.img) { try { const b = await idb.get(o.id); if (b) { await idb.set(`${x.id}~p${pid}`, b); img = true; } } catch (e) {} }
+    x.parts.push({ id: pid, n: on, name: strip(o.title) || '', r: rt(o) || 0, c: o.review || '', date: o.status === 'done' ? o.date || '' : '', img });
+    if (x.cur >= base) x.cur = base + (o.status === 'done' ? on : Math.min(o.cur || 0, on));
+    for (const y of S.items) if (y !== o && y.links && y.links.includes(o.id)) { y.links = [...new Set(y.links.map((q) => (q === o.id ? x.id : q)))].filter((q) => q !== y.id); }
+    x.links = [...new Set([...x.links, ...(o.links || [])])].filter((q) => q !== x.id && q !== o.id);
+    for (const c of Object.values(S.best)) for (const y of Object.keys(c)) c[y] = [...new Set(c[y].map((q) => (q === o.id ? x.id : q)))];
+    x.sh = [...new Set([...(x.sh || []), ...(o.sh || [])])];
+    S.items = S.items.filter((q) => q !== o); for (const k of imgKeys(o)) { idb.del(k).catch(() => {}); forget(k); }
+  }
+  x.vols = x.parts.reduce((q, r) => q + (r.n || 0), 0); x.series = true;
+  if (x.status === 'done' && x.cur < x.vols) { x.status = 'doing'; x.done = false; }
+  touch(x);
 }
 function drawVnotes(x) {
   const C = Cx(x), l = Object.entries(x.v).filter(([k, d]) => d && (d.c || d.r)).sort((a, b) => a[0] - b[0]);
@@ -1070,6 +1200,20 @@ $('#volC').addEventListener('input', (e) => {
   const v = e.target.value.slice(0, 3000); if (v) vget(x, vol.n).c = v; else if (x.v[vol.n]) delete x.v[vol.n].c; if (x.v[vol.n]) x.v[vol.n].u = Date.now();
   clearTimeout(vct); vct = setTimeout(() => touch(x), 400);
 });
+let pct;
+$('#ptName').addEventListener('input', (e) => { const c = curPart(); if (!c) return; c.p.name = e.target.value.trim().slice(0, 40); $('#ptT').textContent = c.p.name || partNm(c.x, part.i); clearTimeout(pct); pct = setTimeout(() => touch(c.x), 400); });
+$('#ptC').addEventListener('input', (e) => { const c = curPart(); if (!c) return; c.p.c = e.target.value.slice(0, 3000); clearTimeout(pct); pct = setTimeout(() => touch(c.x), 400); });
+$('#ptN').addEventListener('change', async (e) => { const c = curPart(); if (!c) return; await setPartN(c.x, part.i, Math.min(int(e.target.value), 2000)); touch(c.x); drawPartSheet(); });
+$('#ptPrice').addEventListener('change', (e) => { const c = curPart(); if (!c) return; const v = int(e.target.value); if (v) { if (!c.p.p || c.p.pt == null) c.p.pt = c.x.old ? 0 : Date.now(); c.p.p = v; } else { delete c.p.p; delete c.p.pt; } touch(c.x); drawPartSheet(); });
+$('#ptDate').addEventListener('change', (e) => { const c = curPart(); if (!c) return; c.p.date = e.target.value; touch(c.x); });
+$('#ptCvSw').addEventListener('click', () => { const c = curPart(); if (!c) return; if (!c.p.img && c.x.coverPart !== c.p.id) { toast('先に写真を入れてね'); return; } c.x.coverPart = c.x.coverPart === c.p.id ? '' : c.p.id; touch(c.x); setSw('#ptCvSw', c.x.coverPart === c.p.id); toast(c.x.coverPart ? `${c.P.name}を表紙にした` : '表紙を元に戻した'); });
+$('#ptIn').addEventListener('change', async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; const c = curPart(); if (!f || !c) return;
+  const r = await cropImage(f, defaultAr(c.x.cat)); if (!r) return;
+  const k = partKey(c.x, c.p);
+  try { await idb.set(k, r.blob); forget(k); c.p.img = true; touch(c.x); drawPartSheet(); } catch (err) { toast('写真を保存できなかった'); }
+});
+$('#dPart').addEventListener('close', () => { clearTimeout(pct); const c = part && findItem(part.id); if (c) { save(); if (curItem() === c) renderPage(c); render(); } part = null; });
 $('#volTitle').addEventListener('input', (e) => {
   const x = vol && findItem(vol.id); if (!x) return;
   const v = e.target.value.trim().slice(0, 120); if (v) vget(x, vol.n).t = v; else if (x.v[vol.n]) delete x.v[vol.n].t;
@@ -1175,6 +1319,7 @@ function drawUnit() {
   const Cd = Cx(draft), ep = draft.unit === 'ep';
   $$('#unitSeg button').forEach((b) => b.classList.toggle('on', (ep ? 'ep' : 'vol') === b.dataset.unit));
   if (Cd.ser) { $('#volsL').textContent = Cd.ser.volsL; $('#curL').textContent = Cd.ser.curL; }
+  const sea = seasoned(draft); $('#fEdit').vols.readOnly = sea; if (sea) { $('#volsL').textContent = '全部の話数（シーズンの合計。変えるのは作品のページのシーズンから）'; $('#curL').textContent = '観たところ（1期からの通しの話数）'; }
   drawRelL(); drawProgF();
   $('#ownL').textContent = ep ? '持ってる単行本（巻・飛び飛びでもOK。空でもOK）' : draft.cat === 'game' ? '持ってる作品（何作目か。飛び飛びでもOK。空なら記録しない）' : '持ってる巻（飛び飛びでもOK。空なら記録しない）';
 }
@@ -1301,7 +1446,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
   /* 曲名・セットリスト */
   if (isM && ser) { lines.forEach((q, i) => { vget(x, i + 1).t = q; }); for (const k of Object.keys(x.v)) if (+k > lines.length && x.v[k]) { delete x.v[k].t; if (!Object.keys(x.v[k]).length) delete x.v[k]; } }
   /* 持ってる巻 */
-  if (ep) { const txt = f.own.value.trim(); x.ownB = txt ? [...parseRanges(txt, 2000)].sort((a, b) => a - b) : []; }
+  if (ep) { const txt = f.own.value.trim(); x.ownB = txt ? [...parseRanges(txt, 2000)].sort((a, b) => a - b) : []; if (x.ownB.length || (x.parts && x.parts.length)) { x.parts = x.parts || []; const mx = Math.min(Math.max(0, ...x.ownB), 500); while (x.parts.length < mx) x.parts.push({ id: uid(), n: x.perVol || 0 }); x.parts.forEach((q, i) => { q.own = x.ownB.includes(i + 1); if (q.own) q.want = false; }); } }
   else if (C.own && ser) {
     const txt = f.own.value.trim();
     if (txt) { const set = parseRanges(txt, vols || 2000); for (const k of Object.keys(x.v)) if (x.v[k].o && !set.has(+k)) delete x.v[k].o; for (const i of set) vget(x, i).o = 1; x.ownOn = true; }
@@ -1757,9 +1902,13 @@ document.addEventListener('click', (e) => {
   /* 巻のシート */
   const vs2 = t.closest('#volRate [data-vstar]');
   if (vs2 && vol) { const x = findItem(vol.id), d = vget(x, vol.n), i = +vs2.dataset.vstar; d.r = d.r === i ? i - 0.5 : i; d.u = Date.now(); logEv(x, 'vr', [vol.n, d.r]); touch(x); $('#volRate').innerHTML = rateHTML(d.r, 'vstar', 'vrateclear'); const s = $(`#volRate [data-vstar="${i}"]`); s.classList.add('pop'); burst(s); return; }
+  /* 巻・シーズンのシート */
+  const pst = t.closest('#ptRate [data-ptstar]'); if (pst) { const c = curPart(); if (c) { const i = +pst.dataset.ptstar; c.p.r = c.p.r === i ? i - 0.5 : i; touch(c.x); $('#ptRate').innerHTML = rateHTML(c.p.r, 'ptstar', 'ptrateclear'); const sx = $(`#ptRate [data-ptstar="${i}"]`); if (sx) sx.classList.add('pop'); } return; }
+  const pow = t.closest('#ptOwnSeg [data-pown]'); if (pow) { const c = curPart(); if (c) { const k = pow.dataset.pown, was = !!c.p.own; c.p.own = k === 'own'; c.p.want = k === 'want'; if (c.p.own && !was && c.p.p) c.p.pt = c.x.old ? 0 : Date.now(); touch(c.x); drawPartSheet(); } return; }
   const x = curItem();
   if (x) {
     const C = Cx(x);
+    const pcd = t.closest('#pParts [data-part]'); if (pcd) { openPart(x, +pcd.dataset.part); return; }
     const redraw = () => { if (curItem() === x) renderPage(x); };
     const st = t.closest('#pSt [data-st]'); if (st) {
       const v = st.dataset.st;
@@ -1848,6 +1997,19 @@ document.addEventListener('click', (e) => {
     case 'erateclear': draft.rating = 0; drawEditRate(); break;
     case 'xrateclear': draft.exp = 0; drawEditRate(); break;
     case 'dust': if (x) { x.touched = Date.now(); logEv(x, 'dust', 1); save(); renderPage(x); toast('ふっ…きれいになった'); } break;
+    case 'partadd': if (x) { const i = addPart(x); touch(x); renderPage(x); openPart(x, i); } break;
+    case 'partauto': if (x) {
+      const pv = int($('#perVol').value), up = int($('#volUpto').value); if (!pv && !up) { toast('話数か巻数を入れてね'); break; }
+      const old = x.perVol || 0; if (pv) x.perVol = pv; x.parts = x.parts || [];
+      while (x.parts.length < Math.min(up, 500)) x.parts.push({ id: uid(), n: 0 });
+      if (pv) x.parts.forEach((q) => { if (!q.n || q.n === old) q.n = pv; });
+      touch(x); drawVols(x); toast(`${x.parts.length}巻まで並べた${pv ? `（1巻${pv}話で分けた）` : ''}`);
+    } break;
+    case 'partmerge': if (x) {
+      showPick({ title: 'シーズンとして取り込む', hint: '「2期」みたいに別で登録した作品を選ぶと、この作品のシーズンになる。評価・感想・話の記録・写真も移る（元の登録は消える）。', okL: '取り込む', sel: new Set(), keep: true,
+        cands: () => itemsOf('anime').filter((o) => o.id !== x.id), pri: (o) => (norm(o.title).includes(norm(x.title).slice(0, 4)) || (x.links || []).includes(o.id) ? 0 : 1), sub: (o) => [o.season, o.year].filter(Boolean).join('　'),
+        save: async (sel) => { const l = [...sel].map(findItem).filter(Boolean); if (!l.length) return; if (!confirm(`「${l.map((o) => o.title).join('」「')}」を、この作品のシーズンとして取り込む。元の登録は消えて、中身はこっちに移る。いい？`)) return; await mergeSeasons(x, l); render(); renderPage(x); toast(`${l.length}つ取り込んだ`); } });
+    } break;
     case 'volplus': if (x) { x.vols = (x.vols || 0) + 1; logEv(x, 'vols', x.vols); touch(x); drawVols(x, x.vols); drawTl(x); toast(`${Cx(x).volN(x.vols)}を足した`); } break;
     case 'vjump': if (x) { const n = int($('#vjump').value); if (n >= 1 && n <= x.vols) openVol(x, n); } break;
     case 'setpages': if (x) { const n = int($('#pPages').value); if (n) { x.pages = n; touch(x); drawProg(x); } } break;
@@ -1861,6 +2023,9 @@ document.addEventListener('click', (e) => {
           save(); drawVolSheet(); drawList(); } });
       break; }
     case 'unlinksg': { const x = vol && findItem(vol.id); if (!x) break; const d = vget(x, vol.n); delete d.sid; d.nos = 1; save(); drawVolSheet(); drawList(); toast('つながりを外した（評価はそのまま残る）'); break; }
+    case 'ptrateclear': { const c = curPart(); if (c) { c.p.r = 0; touch(c.x); $('#ptRate').innerHTML = rateHTML(0, 'ptstar', 'ptrateclear'); } break; }
+    case 'ptphotorm': { const c = curPart(); if (c && c.p.img) { const k = partKey(c.x, c.p); idb.del(k).catch(() => {}); forget(k); c.p.img = false; if (c.x.coverPart === c.p.id) c.x.coverPart = ''; touch(c.x); drawPartSheet(); } break; }
+    case 'ptdel': { const c = curPart(); if (!c) break; if (!confirm(`「${c.P.name}」を消す？${partMode(c.x) === 'season' && c.p.n ? '中の話の評価・感想も消える。' : ''}`)) break; (async () => { await delPart(c.x, part.i); touch(c.x); $('#dPart').close(); })(); break; }
     case 'lks': answerLink('single'); break;
     case 'lkt': answerLink('track'); break;
     case 'lkno': answerLink('no'); break;
@@ -2019,6 +2184,8 @@ $('#imp').addEventListener('change', (e) => { if (e.target.files[0]) readImport(
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#page').hidden && !$('dialog[open]')) closeItem(); });
 // 背景の大きな文字をスクロールに合わせてゆっくり動かす
 let ticking = false;
+/* iPhoneでボタンを押した瞬間の「へこむ」表示を効かせる（これがないと押せたか分かりにくい）。ダブルタップ待ちもなくす */
+document.addEventListener('touchstart', () => {}, { passive: true });
 /* 画面を開いたときに検索欄などへ勝手に入らない（キーボードが出たり画面がズームしたりしない）。見出しに目印だけ置く */
 for (const d of $$('dialog')) { const h = d.querySelector('h3, h2'); if (h) { h.tabIndex = -1; h.setAttribute('autofocus', ''); } }
 /* iPhone（iOS 26）で、画面の見えている範囲と下の基準がずれて下の固定バーが欠けることがある。そのずれ分だけ持ち上げる（キーボードが出ているときは何もしない） */

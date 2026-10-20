@@ -23,6 +23,7 @@ body.night[data-cat="music"]{--room:#141418;--room2:#0e0e11}
 body.night[data-cat="art"]{--room:#272521;--room2:#1e1d1a;--ink:#f1eee6;--sub:#b3ada0;--acc:#93a6ff;--accInk:#14183a;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#171613;--glow:rgba(147,166,255,.14);color-scheme:dark}
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{touch-action:manipulation}
 html{overscroll-behavior-y:none;-webkit-text-size-adjust:100%}
 body{margin:0;background:radial-gradient(ellipse 90% 45% at 50% 0%,var(--lamp),transparent 70%) fixed,var(--room);color:var(--ink);font:15px/1.65 var(--gothic);font-feature-settings:"palt";min-height:100dvh;overflow-x:hidden;transition:background-color .6s var(--ease),color .4s}
 body.paged{overflow:hidden}
@@ -798,3 +799,28 @@ dialog [autofocus]:focus{outline:none}
 .lkcmp b{font-size:20px;color:var(--acc)}
 .lkcmp small{font-size:12px;color:var(--sub);overflow-wrap:anywhere}
 #volLink{display:grid;gap:6px}
+
+/* ===== v22 巻（話で読むとき）・シーズン ===== */
+#pParts .parts{margin-top:12px}
+.parts-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+.parts-h b{font:600 15px/1.3 var(--mincho)}
+.pvset{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:end;margin:6px 0 10px}
+.pstrip{display:flex;gap:12px;overflow-x:auto;padding:4px 2px 8px;margin:0 -2px;scrollbar-width:none;scroll-snap-type:x proximity}
+.pstrip::-webkit-scrollbar{display:none}
+.pcard{flex:none;width:86px;text-align:left;scroll-snap-align:start}
+.pcard .pth{display:block;width:100%;aspect-ratio:.7;border-radius:3px;overflow:hidden;position:relative;box-shadow:0 6px 12px -6px rgba(0,0,0,.6)}
+.pcard .pth .ph{position:absolute;inset:0}
+.pcard b{display:block;margin-top:6px;font:600 12.5px/1.3 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard small{display:block;font-size:11px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pcard small em{font-style:normal;color:var(--acc);margin-right:2px}
+.pcard.want .pth{opacity:.55;outline:1.5px dashed var(--acc);outline-offset:2px}
+.pcard.done .pth::after{content:"✓";position:absolute;right:4px;bottom:4px;width:18px;height:18px;border-radius:50%;background:var(--acc);color:var(--accInk);font:700 11px/18px var(--gothic);text-align:center}
+.pcard.cvr .pth{outline:2px solid var(--acc);outline-offset:2px}
+.pcard:active .pth{transform:scale(.96)}
+.vshelf .vsep{flex:0 0 100%;height:46px;display:flex;align-items:flex-end;padding:0 2px 6px;font:700 12px/1.2 var(--gothic);color:var(--acc)}
+.pteps{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.pteps button{display:block;width:100%;text-align:left;padding:9px 2px;border-bottom:1px solid var(--line)}
+.pteps b{font:600 13.5px/1.3 var(--mincho);margin-right:8px}
+.pteps .num{color:var(--acc);font-size:12.5px}
+.pteps small{display:block;font-size:12px;color:var(--sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ptPv .ph{position:absolute;inset:0}

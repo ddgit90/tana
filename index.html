@@ -225,6 +225,28 @@
   <div class="acts"><button type="button" class="btn" data-act="close">やめる</button><button type="button" class="btn pri" data-act="pickok" id="pickOk">入れる</button></div>
 </div></dialog>
 
+<dialog id="dPart"><div class="sh">
+  <h3 id="ptT"></h3>
+  <label class="f">名前<input id="ptName" autocomplete="off" maxlength="40"></label>
+  <div class="volph">
+    <div class="pv" id="ptPv"></div>
+    <div class="pa">
+      <label class="btn sm" style="display:grid;place-items:center">写真を選ぶ<input type="file" id="ptIn" accept="image/*" hidden></label>
+      <button type="button" class="btn sm" id="ptRm" data-act="ptphotorm">写真を外す</button>
+      <div class="tg"><span>表紙にする<small>棚や一覧に出る表紙</small></span><button type="button" class="sw2" id="ptCvSw" role="switch" aria-checked="false" aria-label="表紙にする"></button></div>
+    </div>
+  </div>
+  <div class="rate small" id="ptRate"></div>
+  <textarea class="vc" id="ptC" maxlength="3000"></textarea>
+  <div id="ptOwnRow"><div class="seg sm" id="ptOwnSeg"></div></div>
+  <label class="f" id="ptDateF">観終えた日<input type="date" id="ptDate"></label>
+  <label class="f" id="ptPriceF"><span id="ptPriceL">値段（円）</span><input id="ptPrice" inputmode="numeric" autocomplete="off" maxlength="9"></label>
+  <label class="f"><span id="ptNL">話数</span><input id="ptN" inputmode="numeric" autocomplete="off" maxlength="4"></label>
+  <p class="hint" id="ptRange" style="margin-top:-8px"></p>
+  <div id="ptEps"></div>
+  <div class="acts"><button type="button" class="btn dan" data-act="ptdel" id="ptDel">消す</button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
+</div></dialog>
+
 <dialog id="dLink"><div class="sh">
   <h3>同じ曲が見つかった</h3>
   <div id="lkBody"></div>
