@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v18';
+const VER = 'v20';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,6 +41,16 @@ const MEDIA_M = [['CD', 'CD'], ['レコード', 'レコード'], ['配信', '配
 const GENRES = ['邦楽', '洋楽', 'クラシック', 'アニソン', 'ボカロ', 'サントラ', 'BGM', 'ジャズ', 'K-POP'];
 const BOOM_MAX = 5;
 /* 作品ごとの数え方（漫画・本は「話」で数えることもできる） */
+/* 単位の言い方（「作」だけだと不自然なので「作品」に） */
+const volW = (C) => (C.vol === '作' ? '作品' : C.vol);
+/* 続き・続編の「出る日」の言い方：部屋ごとに（発売・放送・公開・更新） */
+function relWord(x) {
+  const C = Cx(x), ser = !!(x.series && C.ser), ep = x.unit === 'ep';
+  const w = x.cat === 'anime' ? (ser ? ['放送・配信日', '放送'] : ['放送・公開日', '公開']) : x.cat === 'movie' ? ['公開日', '公開'] : ep ? ['更新日', '更新'] : ['発売日', '発売'];
+  const what = ser ? C.volN((x.vols || 0) + 1) : x.cat === 'music' ? '新譜・新曲' : x.cat === 'anime' ? '続編・新シーズン' : x.cat === 'movie' ? '続編' : '続編・新作';
+  const next = ser ? (x.cat === 'manga' || x.cat === 'book' ? (ep ? '次の話' : '次の新刊') : `次の${volW(C)}`) : what;
+  return { what, day: w[0], v: w[1], label: `${next}の${w[0]}（わかれば）` };
+}
 function Cx(x) {
   const C = CATS[x.cat];
   if (x.unit === 'ep' && (x.cat === 'manga' || x.cat === 'book')) return { ...C, vol: '話', volN: (n) => `第${n}話`, own: false, ser: { ...C.ser, have: '今', nw: '新しい話', volsL: '今出てる話数（わからなければ空でOK）', curL: '読んだところ（話）' } };
@@ -546,7 +556,7 @@ function drawList(anim = false) {
     const kind = C.side ? '' : S.cat === 'art' ? ' artc' : S.cat === 'music' ? ' sq' : ' poster';
     el.innerHTML = `<div class="covers">${a.map((x, i) => { const r = rt(x); return `<button class="cv${kind}${x.want ? ' want' : ''}" data-id="${esc(x.id)}"${albumTap(x) ? ' data-kids="1"' : ''} style="--i:${I(i)};--col:${colOf(x)}"><div class="bk vt${C.side === 'right' ? '' : ' r'}"><div class="fc">${phHTML(x, { dust: true })}</div><span class="ed"></span></div><b>${esc(x.title)}</b><small>${r ? starsHTML(r) : esc(stLabel(x.cat, x.status))}</small>${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</button>` + (ui.open.has(x.id) && canKids(x) ? `<div class="kidsrow">${kidsHTML(x)}</div>` : ''); }).join('')}</div>`;
   } else {
-    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${I(i)}"><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? '<span class="pill">ほしい</span>' : ''}${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>` + (ui.open.has(x.id) && canKids(x) ? `<li class="kidsli">${kidsHTML(x)}</li>` : ''); }).join('')}</ul>`;
+    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${I(i)}"><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? `<span class="pill">${esc(wantForm(x) || 'ほしい')}</span>` : ''}${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>` + (ui.open.has(x.id) && canKids(x) ? `<li class="kidsli">${kidsHTML(x)}</li>` : ''); }).join('')}</ul>`;
   }
   if (S.cat === 'music' && ui.kind === 'song') el.insertAdjacentHTML('beforeend', albumTracksHTML());
   if (shHead) el.insertAdjacentHTML('afterbegin', shHead);
@@ -652,7 +662,7 @@ function nextGroups(cat) {
     return g;
   }
   const rel = a.filter((x) => x.rel).sort((x, y) => x.rel.localeCompare(y.rel));
-  if (rel.length) g.push({ title: '発売日', sub: '近い順', list: rel, kind: 'rel' });
+  if (rel.length) g.push({ title: { anime: '放送・公開日', movie: '公開日' }[cat] || '発売日', sub: '近い順', list: rel, kind: 'rel' });
   if (cat === 'music') {
     take('ライブ', '近い順', a.filter((x) => kindOf(x) === 'live' && x.tst !== 'went' && x.tst !== 'lose' && (!x.ldate || dayDiff(x.ldate) >= 0)).sort((x, y) => (x.ldate || '9').localeCompare(y.ldate || '9')), 'live');
     take('聴いてる', '', a.filter((x) => x.status === 'doing' && kindOf(x) !== 'live').sort(upd), 'doing');
@@ -661,7 +671,7 @@ function nextGroups(cat) {
     return g;
   }
   const ser = a.filter((x) => x.series && (x.vols || x.unit === 'ep') && x.status !== 'pause');
-  if (C.own) take('次に買う', '持ってない巻', ser.filter((x) => x.ownOn && missing(x).length).sort(upd), 'buy');
+  if (C.own) take('次に買う', `持ってない${volW(C)}`, ser.filter((x) => x.ownOn && missing(x).length).sort(upd), 'buy');
   take(cat === 'manga' || cat === 'book' ? '続きを読む' : cat === 'anime' ? '続きを観る' : 'シリーズの続き', '', ser.filter((x) => canRead(x) && !x.want && !(x.status === 'done' && x.done)).sort(upd), 'cont');
   take(cat === 'game' ? 'プレイ中' : '途中', '', a.filter((x) => x.status === 'doing' && !x.series).sort(upd), 'doing');
   take({ manga: '未読（積んでる）', book: '未読（積んでる）', anime: 'まだ観てない', movie: 'まだ観てない', game: '未プレイ' }[cat], '', a.filter((x) => x.status === 'none' && !x.want).sort((x, y) => y.created - x.created), 'none');
@@ -682,14 +692,15 @@ function drawNext() {
       if (x.ldate) { const d = dayDiff(x.ldate); due = `<span class="due${d <= 14 ? ' soon' : ''}">${d === 0 ? '今日' : d}<small>${d === 0 ? '' : '日後'}<br>${+x.ldate.slice(5, 7)}/${+x.ldate.slice(8)}</small></span>`; }
     }
     else if (g.kind === 'rel') {
-      const d = dayDiff(x.rel), what = x.cat === 'music' ? '新譜・新曲' : x.series && C.ser ? Cx(x).volN((x.vols || 0) + 1) : '続編・新作';
-      line = `<em>${esc(what)}</em>　${x.rel.slice(5).replace('-', '/')}発売`;
+      const d = dayDiff(x.rel), W = relWord(x), what = W.what;
+      line = `<em>${esc(what)}</em>　${x.rel.slice(5).replace('-', '/')}${W.v}`;
       if (d > 0) due = `<span class="due${d <= 14 ? ' soon' : ''}">${d}<small>日後<br>${+x.rel.slice(5, 7)}/${+x.rel.slice(8)}</small></span>`;
-      else act = `<button class="go" data-nx="rel" data-nid="${esc(x.id)}">${d === 0 ? '今日発売' : '出た'}</button>`;
+      else act = `<button class="go" data-nx="rel" data-nid="${esc(x.id)}">${d === 0 ? `今日${W.v}` : '出た'}</button>`;
     } else if (g.kind === 'art') {
       line = esc([x.creator, x.place].filter(Boolean).join('　')) || '　';
       if (x.until) { const d = dayDiff(x.until); due = `<span class="due${d <= 14 ? ' soon' : ''}">${d === 0 ? '今日' : d}<small>${d === 0 ? 'まで' : '日後まで'}<br>${x.until.slice(5).replace('-', '/')}</small></span>`; }
     } else if (g.kind === 'doing') line = esc(progText(x) || meta(x) || stLabel(x.cat, x.status)) + (dustLv(x) ? '　<em>ほこりをかぶってる</em>' : '');
+    else if (g.kind === 'want' && x.media) line = `<em>${esc(wantForm(x))}</em>　${esc(meta(x))}`;
     else line = esc(meta(x)) || esc(stLabel(x.cat, x.status));
     return `<div class="nrow" style="--i:${Math.min(i++, 30)}"><button class="open" data-oid="${esc(x.id)}"><span class="th">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${line}</small></span></button>${act}${due}</div>`;
   }).join('')}</section>`).join('');
@@ -707,21 +718,22 @@ function heroHTML(x) {
   return `<div class="hero"><div class="bk${C.side === 'right' ? '' : ' r'}${x.cat === 'movie' ? ' flat' : ''}" id="pageHero" style="--col:${colOf(x)}"><div class="fc">${phHTML(x, { prog: false })}</div><span class="ed"></span></div></div>`;
 }
 function relHTML(x) {
-  const C = Cx(x), d = dayDiff(x.rel), what = x.cat === 'music' ? '新譜・新曲' : x.series && C.ser ? C.volN((x.vols || 0) + 1) : '続編・新作';
-  return `<div class="sec"><div class="box relbox"><span><small>${esc(what)}の発売日</small><b class="num">${+x.rel.slice(0, 4)}/${+x.rel.slice(5, 7)}/${+x.rel.slice(8)}</b></span>${d > 0 ? `<span class="num rd">あと<b>${d}</b>日</span>` : `<button class="btn sm pri" data-nx="rel" data-nid="${esc(x.id)}">${d === 0 ? '今日発売！出た' : '出た'}</button>`}</div></div>`;
+  const d = dayDiff(x.rel), W = relWord(x), what = W.what;
+  return `<div class="sec"><div class="box relbox"><span><small>${esc(what)}の${W.day}</small><b class="num">${+x.rel.slice(0, 4)}/${+x.rel.slice(5, 7)}/${+x.rel.slice(8)}</b></span>${d > 0 ? `<span class="num rd">あと<b>${d}</b>日</span>` : `<button class="btn sm pri" data-nx="rel" data-nid="${esc(x.id)}">${d === 0 ? `今日${W.v}！出た` : '出た'}</button>`}</div></div>`;
 }
+const wantForm = (x) => (x.want && x.media ? `${x.media}${x.cat === 'anime' || x.cat === 'movie' ? 'で観たい' : 'でほしい'}` : '');
 function haveHTML(x) {
   const r = [];
   if (x.cat === 'game' && x.platform) r.push(['機種', esc(x.platform)]);
-  if (x.media) r.push(['持ち方', esc(x.media)]);
-  if (x.app) r.push([x.media === '配信' ? '配信サービス' : 'アプリ', esc(x.app)]);
-  if (x.where) r.push(['置き場所', esc(x.where)]);
+  if (x.want && x.media) r.push(['ほしい形', esc(wantForm(x))]); else if (x.media) r.push(['持ち方', esc(x.media)]);
+  if (x.app && !x.want) r.push([x.media === '配信' ? '配信サービス' : 'アプリ', esc(x.app)]);
+  if (x.where && !x.want) r.push(['置き場所', esc(x.where)]);
   if (x.theater) r.push(['劇場', esc(x.theater) + (x.seat ? `　座席 ${esc(x.seat)}` : '')]);
   else if (x.seat) r.push(['座席', esc(x.seat)]);
   if (x.fmt.length) r.push(['形式', x.fmt.map(esc).join('・')]);
   if (S.set.money && spentAll(x)) r.push(['使ったお金', `<span class="num">${yen(spentAll(x))}</span>`]);
   if (S.set.money && wishOf(x)) r.push(['買う前の値段', `<span class="num">${yen(wishOf(x))}</span>（合計には入らない）`]);
-  return r.length ? `<div class="sec"><h4>持ち方・置き場所</h4><dl class="meta">${r.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl></div>` : '';
+  return r.length ? `<div class="sec"><h4>${x.want ? 'ほしい形' : '持ち方・置き場所'}</h4><dl class="meta">${r.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl></div>` : '';
 }
 /* 曲名でライブ・曲をつなぐ */
 const sameArtist = (a, b) => !a || !b || norm(a) === norm(b);
@@ -974,6 +986,10 @@ function answerLink(how) {
   if (linkQ.length) askLink(); else $('#dLink').close();
 }
 const linkedAlbums = (s) => { const out = []; eachTrack((a, i, d) => { if (d.sid === s.id) out.push([a, i]); }); return out; };
+/* 追加・編集の画面：入れかけの内容があるときは、閉じる前に確認する */
+let editSnap = '';
+const editSig = () => { try { const f = $('#fEdit'); return JSON.stringify([[...new FormData(f)].filter(([, v]) => typeof v === 'string'), draft && [draft.status, draft.want, draft.rating, draft.media, draft.kind, draft.series, draft.unit, draft.tags, draft.fmt, draft.links, !!draft.newImg]]); } catch (e) { return ''; } };
+function canClose(d) { if (!d || d.id !== 'dEdit' || !editSnap || editSig() === editSnap) return true; return confirm('入れた内容はまだ保存されてない。閉じる？'); }
 const touch = (x) => { x.updated = x.touched = Date.now(); save(); };
 function setStatus(x, st, date) {
   if (x.status !== st) {
@@ -1120,7 +1136,7 @@ function openEdit(id) {
   { const py = draft.pt ? new Date(draft.pt).getFullYear() : 0;
     draft.buy = x && x.price ? (draft.pt === 0 ? 'unk' : py && py !== new Date().getFullYear() ? 'year' : 'now') : draft.old ? 'unk' : 'now';
     f.buyY.value = draft.buy === 'year' ? py : ''; }
-  $('#oldL').firstChild.textContent = `前から持ってる・前に${C.did}もの`;
+  $('#oldL').firstChild.textContent = C.own || C.media ? `前から持ってる・前に${C.did}もの` : `前に${C.did}もの`;
   setSw('#oldSw', draft.old); drawBuy();
   drawUnit(); drawStSeg();
   setSw('#serSw', draft.series); setSw('#doneSw', draft.done); $('#serF').hidden = !draft.series;
@@ -1134,7 +1150,7 @@ function openEdit(id) {
   const filled = x && !!(x.yomi || x.year || x.exp || x.media || x.price || x.rel || x.review || x.memo || x.links.length || x.season || x.pages || x.hours || x.pct !== '' && x.pct != null);
   ui.adv = !S.set.simple || filled;
   $('#fEdit').classList.toggle('simple', !!S.set.simple); $('#fEdit').classList.toggle('advOpen', ui.adv); $('#advB').hidden = !S.set.simple || ui.adv;
-  $('#dEdit').showModal();
+  $('#dEdit').showModal(); setTimeout(() => { editSnap = editSig(); }, 60);
   $('#dEdit').scrollTop = 0;
   if (!x) setTimeout(() => { const ae = document.activeElement; if (!ae || !/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) f.title.focus(); }, 400);
 }
@@ -1146,6 +1162,7 @@ function drawQP() {
   const sets = { app: top('app', (x) => (m === '配信' ? x.media === '配信' : x.media === '電子' || x.media === '両方')), where: top('where'), platform: top('platform'), theater: top('theater'), venue: top('venue'), perf: top('perf'), creator: top('creator', (x) => x.cat === draft.cat) };
   for (const el of $$('.qpick')) {
     const k = el.dataset.q, cur = (f[k] && f[k].value || '').trim(), l = (sets[k] || []).filter((v) => v !== cur);
+    const fld = el.previousElementSibling; if (fld && fld.hidden) { el.hidden = true; continue; }
     el.innerHTML = l.map((v) => `<button type="button" class="chip" data-qk="${k}" data-qv="${esc(v)}">${esc(v)}</button>`).join(''); el.hidden = !l.length;
   }
 }
@@ -1158,7 +1175,8 @@ function drawUnit() {
   const Cd = Cx(draft), ep = draft.unit === 'ep';
   $$('#unitSeg button').forEach((b) => b.classList.toggle('on', (ep ? 'ep' : 'vol') === b.dataset.unit));
   if (Cd.ser) { $('#volsL').textContent = Cd.ser.volsL; $('#curL').textContent = Cd.ser.curL; }
-  $('#ownL').textContent = ep ? '持ってる単行本（巻・飛び飛びでもOK。空でもOK）' : '持ってる巻（飛び飛びでもOK。空なら記録しない）';
+  drawRelL(); drawProgF();
+  $('#ownL').textContent = ep ? '持ってる単行本（巻・飛び飛びでもOK。空でもOK）' : draft.cat === 'game' ? '持ってる作品（何作目か。飛び飛びでもOK。空なら記録しない）' : '持ってる巻（飛び飛びでもOK。空なら記録しない）';
 }
 function drawMusicF() {
   if (draft.cat !== 'music') return;
@@ -1175,14 +1193,14 @@ function drawMusicF() {
   $('#liveMoney').hidden = !live || !S.set.money;
   $('#oldRow').hidden = live;
   $('#priceL').textContent = live ? 'チケット代（円）' : draft.want ? '値段（円・ほしい物は買うまで合計に入らない）' : '値段（円）';
-  $('#relF').hidden = live; $('#relL').textContent = '新譜・新曲の発売日（わかれば）';
+  $('#relF').hidden = live; $('#relL').textContent = relWord(draft).label;
   $('#rateL').textContent = live ? 'ライブの評価' : k === 'album' ? '評価（アルバム全体。曲ごとの星は作品のページで）' : '評価';
 }
 function drawLinkChips() {
   const l = (draft.links || []).map(findItem).filter(Boolean);
   $('#linkChips').innerHTML = l.length ? l.map((o) => `<button type="button" class="chip on" data-unlink="${esc(o.id)}">${esc(o.title)}<small>${esc(CATS[o.cat].short || CATS[o.cat].name)}</small>　×</button>`).join('') : '<p class="hint" style="margin:0">なし（押さなければ何も出ない）</p>';
 }
-const drawRelL = () => { const C = CATS[draft.cat]; $('#relL').textContent = draft.series && C.ser ? `次の${C.ser.nw}の発売日（わかれば）` : '続編・新作の発売日（わかれば）'; };
+const drawRelL = () => { $('#relL').textContent = relWord(draft).label; };
 const curTags = () => $('#fEdit').tags.value.split(/[\s、,，]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean);
 const setTags = (a) => { $('#fEdit').tags.value = [...new Set(a)].slice(0, 12).join(' '); drawTagSel(); if ($('#dTagP').open) drawTagPick(); };
 function drawTagSel() {
@@ -1206,24 +1224,26 @@ function drawProgF() {
   const book = draft.cat === 'book' && !draft.series, game = draft.cat === 'game';
   $('#progG').hidden = !(book || game); $('#pagesF').hidden = !book; $('#gameF').hidden = !game; $('#pctF').hidden = draft.series;
   $('#photoHint').hidden = !draft.series || draft.cat === 'art';
+  { const C = Cx(draft), w = volW(C); $('#photoHint').textContent = `${w}ごとの写真は、作品のページで「${C.volN(1)}」などをタップすると入れられる。`; }
 }
 function drawHave() {
   const C = CATS[draft.cat], m = draft.media || '';
   if (!C.media) return;
   $('#mediaSeg').innerHTML = C.media.map((k) => `<button type="button" data-media="${k}" class="${m === k ? 'on' : ''}">${k}</button>`).join('');
   $('#pfF').hidden = draft.cat !== 'game';
-  const appOn = ['電子', '両方', '配信'].includes(m), whereOn = ['紙', '両方', 'ディスク', 'パッケージ'].includes(m);
+  const w = !!draft.want, appOn = !w && ['電子', '両方', '配信'].includes(m), whereOn = !w && ['紙', '両方', 'ディスク', 'パッケージ'].includes(m);
   $('#appF').hidden = !appOn; $('#appL').textContent = m === '配信' ? '配信サービス' : '電子書籍のアプリ';
   $('#fEdit').app.setAttribute('list', m === '配信' ? 'svcList' : 'appList');
   $('#fEdit').app.placeholder = m === '配信' ? '例：Netflix' : '例：Kindle';
   $('#whereF').hidden = !whereOn; $('#whereL').textContent = m === '両方' ? '紙の置き場所' : '置き場所';
-  $('#theaterF').hidden = m !== '映画館';
+  $('#theaterF').hidden = w || m !== '映画館';
   $('#fmtSeg').innerHTML = FMTS.map((k) => `<button type="button" data-fmt="${k}" class="${draft.fmt.includes(k) ? 'on' : ''}">${k}</button>`).join('');
   $('#priceF').hidden = !S.set.money;
   $('#mediaSeg').hidden = false;
   if (draft.cat === 'music') drawMusicF();
   drawQP();
   $('#haveL').textContent = draft.cat === 'music' ? '持ち方（CD・レコード・配信）' : draft.cat === 'manga' || draft.cat === 'book' ? '持ち方・置き場所（紙？電子？どこにある？）' : draft.cat === 'game' ? '持ち方（機種・パッケージ？ダウンロード？）' : '観た・持ってる場所';
+  if (w) $('#haveL').textContent = draft.cat === 'game' ? 'どの形でほしい？（機種・パッケージ？ダウンロード？）' : draft.cat === 'anime' || draft.cat === 'movie' ? 'どこで観たい？' : 'どの形でほしい？';
 }
 const drawEditRate = () => { $('#editRate').innerHTML = rateHTML(draft.rating, 'estar', 'erateclear'); $('#editExp').innerHTML = rateHTML(draft.exp || 0, 'xstar', 'xrateclear'); $('#rateL').textContent = draft.series && draft.cat !== 'music' ? `評価（シリーズ全体。${Cx(draft).vol}ごとの星は作品のページで）` : '評価'; if (draft.cat === 'music') drawMusicF(); };
 const drawSwatches = () => { $('#sws').innerHTML = PALETTE.map((c) => `<button type="button" data-sw="${c}" style="--s:${c}" class="${(draft.color || '') === c ? 'on' : ''}" aria-label="色"></button>`).join(''); };
@@ -1760,7 +1780,7 @@ document.addEventListener('click', (e) => {
       if (ui.vmode === 'own') { const d = vget(x, v); if (!x.ownOn) { x.ownOn = true; for (let i = 1; i <= x.cur; i++) vget(x, i).o = 1; } if (d.o) delete d.o; else { d.o = 1; logEv(x, 'buy', v); } touch(x); drawVols(x, v); drawTl(x); return; }
       x.cur = x.cur === v ? v - 1 : v; logEv(x, 'cur', x.cur); autoStatus(x, redraw); touch(x); drawVols(x, v); drawSt(x); drawTl(x); return;
     }
-    const vm = t.closest('[data-vm]'); if (vm) { ui.vmode = vm.dataset.vm; if (ui.vmode === 'own' && !x.ownOn) toast('タップした巻が「持ってる」になる'); drawVols(x); return; }
+    const vm = t.closest('[data-vm]'); if (vm) { ui.vmode = vm.dataset.vm; if (ui.vmode === 'own' && !x.ownOn) toast(`タップした${volW(Cx(x))}が「持ってる」になる`); drawVols(x); return; }
     const vno = t.closest('[data-vopen]'); if (vno) { openVol(x, +vno.dataset.vopen); return; }
     const ts = t.closest('#pTst [data-tst]'); if (ts) {
       const v = ts.dataset.tst; x.tst = x.tst === v ? '' : v; logEv(x, 'tst', x.tst);
@@ -1787,7 +1807,7 @@ document.addEventListener('click', (e) => {
     }
     void C;
   }
-  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } if (draft.old && draft.status === 'done') draft.wm = 'none'; drawStSeg(); drawWhen(); drawBuy(); return; }
+  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } if (draft.old && draft.status === 'done') draft.wm = 'none'; drawStSeg(); drawWhen(); drawBuy(); drawHave(); return; }
   const bu = t.closest('#buySeg [data-buy]'); if (bu) { draft.buy = bu.dataset.buy; drawBuy(); if (draft.buy === 'year') setTimeout(() => $('#fEdit').buyY.focus(), 50); return; }
   const wmb = t.closest('[data-wm]'); if (wmb) { const box = wmb.closest('.whenui'), st = box.id === 'whenUI' ? draft : doneCtx; if (!st) return; st.date = readWhen(box, st) || st.date; st.wm = wmb.dataset.wm; drawWhenUI(box, st); return; }
   const es = t.closest('#editRate [data-estar]'); if (es) { const i = +es.dataset.estar; draft.rating = draft.rating === i ? i - 0.5 : i; drawEditRate(); $(`#editRate [data-estar="${i}"]`).classList.add('pop'); return; }
@@ -1808,7 +1828,7 @@ document.addEventListener('click', (e) => {
     case 'new': openEdit(null); break;
     case 'edit': openEdit(curId); break;
     case 'back': closeItem(); break;
-    case 'close': a.closest('dialog').close(); break;
+    case 'close': { const dl = a.closest('dialog'); if (canClose(dl)) dl.close(); break; }
     case 'settings': drawSettings(); $('#dSet').showModal(); break;
     case 'tower': drawTower(); $('#dTower').showModal(); break;
     case 'money': drawMoney(); $('#dMoney').showModal(); break;
@@ -1968,7 +1988,31 @@ $('#volCvSw').addEventListener('click', () => { const x = vol && findItem(vol.id
 $('#volOwnSw').addEventListener('click', () => { const x = vol && findItem(vol.id); if (!x) return; const d = vget(x, vol.n); if (!x.ownOn) { x.ownOn = true; for (let i = 1; i <= x.cur; i++) vget(x, i).o = 1; } if (d.o) delete d.o; else { d.o = 1; logEv(x, 'buy', vol.n); } touch(x); setSw('#volOwnSw', owned(x, vol.n)); });
 const togg = (k) => () => { S.set[k] = !S.set[k]; save(); drawSettings(); render(); };
 $('#todSw').addEventListener('click', togg('tod')); $('#simpleSw').addEventListener('click', togg('simple')); $('#moneySw').addEventListener('click', togg('money')); $('#dustSw').addEventListener('click', togg('dust'));
-$$('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d && d.id !== 'dCrop' && d.id !== 'dCmp') d.close(); }));
+$$('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d && d.id !== 'dCrop' && d.id !== 'dCmp' && canClose(d)) d.close(); }));
+$('#dEdit').addEventListener('cancel', (e) => { if (!canClose($('#dEdit'))) e.preventDefault(); });
+/* シートを下に引っぱると閉じる（上の横棒のところ、または中身がいちばん上までスクロールされているとき） */
+(() => {
+  let st = null;
+  const blocked = (el, d) => { for (let n = el; n && n !== d; n = n.parentElement) { if (n.scrollTop > 0 || n.tagName === 'TEXTAREA' || n.tagName === 'SELECT' || (n.tagName === 'INPUT' && n.type === 'range')) return true; } return d.scrollTop > 0; };
+  for (const d of $$('dialog')) {
+    if (d.id === 'dCrop' || d.id === 'dCmp') continue;
+    d.addEventListener('touchstart', (e) => { st = e.touches.length === 1 && !blocked(e.target, d) ? { d, y: e.touches[0].clientY, x: e.touches[0].clientX, t: Date.now(), dy: 0, on: false } : null; }, { passive: true });
+    d.addEventListener('touchmove', (e) => {
+      if (!st || st.d !== d) return;
+      const dy = e.touches[0].clientY - st.y, dx = e.touches[0].clientX - st.x;
+      if (!st.on) { if (dy < -4 || Math.abs(dx) > 10) { st = null; return; } if (dy < 8 || Math.abs(dx) > dy) return; st.on = true; d.style.transition = 'none'; }
+      e.preventDefault(); st.dy = Math.max(0, dy - 8); d.style.transform = `translateY(${st.dy}px)`;
+    }, { passive: false });
+    const end = () => {
+      if (!st || st.d !== d) return; const s0 = st; st = null; if (!s0.on) return;
+      const fast = s0.dy > 50 && s0.dy / Math.max(1, Date.now() - s0.t) > 0.6;
+      d.style.transition = 'transform .26s cubic-bezier(.2,.8,.2,1)';
+      if ((s0.dy > Math.min(150, d.offsetHeight * 0.28) || fast) && canClose(d)) { d.style.transform = 'translateY(100%)'; setTimeout(() => { d.close(); d.style.transform = ''; d.style.transition = ''; }, 250); }
+      else { d.style.transform = ''; setTimeout(() => { d.style.transition = ''; }, 280); }
+    };
+    d.addEventListener('touchend', end); d.addEventListener('touchcancel', end);
+  }
+})();
 $('#q').addEventListener('input', (e) => { ui.q = e.target.value.trim(); drawList(); });
 $('#sort').addEventListener('change', (e) => { S.sort = e.target.value; save(); drawList(); });
 $('#imp').addEventListener('change', (e) => { if (e.target.files[0]) readImport(e.target.files[0]); e.target.value = ''; });
