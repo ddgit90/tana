@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v23';
+const VER = 'v24';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,7 +31,7 @@ const CATS = {
 CATS.music = { name: '音楽', unit: '作品', creator: 'アーティスト', vol: '曲', volN: (n) => `${n}曲目`, st: [['none', 'まだ'], ['doing', '聴いてる'], ['done', '聴いた']], shelf: 'disc', side: '', verb: '聴く', did: '聴いた', act: '聴いた', start: '聴きはじめた', doneQ: '聴いた？', whenQ: 'いつ聴いた？', room: '#18181d', own: false, ser: null, media: ['CD', 'レコード', '配信', 'ダウンロード'] };
 const ORDER = ['manga', 'anime', 'movie', 'music', 'book', 'game', 'art'];
 /* 部屋の中の種類（アニメ／ドラマ、曲／アルバム／ライブ） */
-const KINDS = { anime: [['anime', 'アニメ'], ['drama', 'ドラマ']], music: [['song', 'シングル'], ['album', 'アルバム'], ['live', 'ライブ']] };
+const KINDS = { manga: [['yoko', '漫画'], ['tate', '縦読み']], anime: [['anime', 'アニメ'], ['drama', 'ドラマ']], music: [['song', 'シングル'], ['album', 'アルバム'], ['live', 'ライブ']] };
 const kindOf = (x) => x.kind || (KINDS[x.cat] ? KINDS[x.cat][0][0] : '');
 const TST = [['apply', '申し込んだ'], ['lot', '抽選中'], ['win', '当選'], ['lose', '落選'], ['went', '行った']];
 const tstLabel = (k) => (TST.find((q) => q[0] === k) || ['', ''])[1];
@@ -52,7 +52,8 @@ function relWord(x) {
   return { what, day: w[0], v: w[1], label: `${next}の${w[0]}（わかれば）` };
 }
 /* ===== 巻（話で読む漫画・本）／シーズン（アニメ）：話をまとめる箱 ===== */
-const partMode = (x) => (x.cat === 'anime' && x.series ? 'season' : (x.cat === 'manga' || x.cat === 'book') && x.series && x.unit === 'ep' ? 'vol' : '');
+const isTate = (x) => x.cat === 'manga' && x.kind === 'tate';
+const partMode = (x) => (x.cat === 'anime' && x.series ? 'season' : (x.cat === 'manga' || x.cat === 'book') && x.series && x.unit === 'ep' && !isTate(x) ? 'vol' : '');
 const partNm = (x, i) => (partMode(x) === 'season' ? `${i}期` : `${i}巻`);
 function partsOf(x) { if (!Array.isArray(x.parts)) return []; let from = 1; return x.parts.map((p, i) => { const n = p.n || 0, r = { ...p, i: i + 1, name: p.name || partNm(x, i + 1), from, to: from + n - 1 }; from += n; return r; }); }
 const partOf = (x, k) => partsOf(x).find((p) => p.n && k >= p.from && k <= p.to);
@@ -318,7 +319,7 @@ function phHTML(x, o = {}) {
 /* 文章の中のURLを押せるリンクにする（http(s)://〜） */
 const linkify = (t) => esc(t).replace(/https?:\/\/[^\s<>"'（）「」『』、。！？]+/g, (u) => { const clean = u.replace(/[.,!?;:)\]]+$/, ''), rest = u.slice(clean.length); let label = clean.replace(/^https?:\/\/(www\.)?/, ''); if (label.length > 42) label = label.slice(0, 40) + '…'; return `<a class="ulink" href="${clean}" target="_blank" rel="noopener noreferrer">${label}</a>${rest}`; });
 const isCl = (x) => x.cat === 'music' && kindOf(x) !== 'live' && (x.genre || '').trim() === 'クラシック';
-const meta = (x) => x.cat === 'music' ? (kindOf(x) === 'live' ? [x.creator, x.venue, x.ldate ? fmtWhen(x.ldate) : ''] : [kindOf(x) === 'album' ? 'アルバム' : '', x.creator, isCl(x) ? x.perf : '', x.genre, x.year]).filter(Boolean).join('　') : [x.kind === 'drama' ? 'ドラマ' : '', x.creator, x.cat === 'game' ? x.platform : '', x.season, x.year].filter(Boolean).join('　');
+const meta = (x) => x.cat === 'music' ? (kindOf(x) === 'live' ? [x.creator, x.venue, x.ldate ? fmtWhen(x.ldate) : ''] : [kindOf(x) === 'album' ? 'アルバム' : '', x.creator, isCl(x) ? x.perf : '', x.genre, x.year]).filter(Boolean).join('　') : [x.kind === 'drama' ? 'ドラマ' : x.kind === 'tate' ? '縦読み' : '', x.creator, x.cat === 'game' ? x.platform : '', x.season, x.year].filter(Boolean).join('　');
 /* 日付：'2015' / '2015-05' / '2015-05-03' / '' */
 function fmtWhen(d) {
   if (!d) return '時期不明';
@@ -369,6 +370,7 @@ function logText(x, e) {
     case 'dust': return 'ほこりを払った';
     case 'rerate': return `★${e.v[0]} → ★${e.v[1]} に再評価`;
     case 'tst': return `チケット：${tstLabel(e.v)}`;
+    case 'wbuy': return `手元に買った${e.v ? `（${e.v}）` : ''}`;
     default: return '';
   }
 }
@@ -394,7 +396,7 @@ const spentList = (list) => list.reduce((s, x) => s + spentAll(x), 0);
 const spentAll = (x) => spends(x).reduce((a, [, p]) => a + p, 0);
 /* ほしい物・持ってない巻の値段（買う前） */
 const partWish = (x) => (partMode(x) === 'vol' ? (x.parts || []).reduce((a, q) => a + (q.want && q.p ? q.p : 0), 0) : 0);
-const wishOf = (x) => partWish(x) + (x.want ? (x.price || 0) + Object.values(x.v).reduce((a, d) => a + ((d && d.p) || 0), 0) : Object.values(x.v).reduce((a, d) => a + (x.ownOn && d && d.p && !d.o ? d.p : 0), 0));
+const wishOf = (x) => partWish(x) + (x.wish && !x.want ? x.wishP || 0 : 0) + (x.want ? (x.price || 0) + Object.values(x.v).reduce((a, d) => a + ((d && d.p) || 0), 0) : Object.values(x.v).reduce((a, d) => a + (x.ownOn && d && d.p && !d.o ? d.p : 0), 0));
 
 /* ===== ティア ===== */
 function inTier(list, t) {
@@ -424,7 +426,7 @@ const titleKey = (x) => norm(x.yomi || x.title);
 function visible() {
   const q = norm(ui.q);
   let a = itemsOf(S.cat);
-  if (ui.filter === 'want') a = a.filter((x) => x.want);
+  if (ui.filter === 'want') a = a.filter((x) => x.want || x.wish);
   else if (ui.filter !== 'all') a = a.filter((x) => x.status === ui.filter);
   if (fOn()) a = a.filter((x) => matchF(x, ui.F));
   if (KINDS[S.cat] && ui.kind) a = a.filter((x) => kindOf(x) === ui.kind);
@@ -472,7 +474,7 @@ function render(anim = false) {
   const n = (f) => all.filter(f).length;
   if (ui.F.sh) ui.F.sh = ui.F.sh.filter((id) => shelvesOf(S.cat).some((h) => h.id === id));
   if (ui.filter.startsWith('sh:')) ui.filter = 'all';
-  const chips = [['all', 'すべて', all.length], ...C.st.map(([k, l]) => [k, l, n((x) => x.status === k)]), ['want', 'ほしい', n((x) => x.want)]];
+  const chips = [['all', 'すべて', all.length], ...C.st.map(([k, l]) => [k, l, n((x) => x.status === k)]), ['want', 'ほしい', n((x) => x.want || x.wish)]];
   /* タグごとの数 */
   const tc = new Map(); for (const x of all) for (const t of x.tags) tc.set(t, (tc.get(t) || 0) + 1);
   if (ui.F.tag) ui.F.tag = ui.F.tag.filter((t) => tc.has(t));
@@ -570,7 +572,7 @@ function drawList(anim = false) {
     const kind = C.side ? '' : S.cat === 'art' ? ' artc' : S.cat === 'music' ? ' sq' : ' poster';
     el.innerHTML = `<div class="covers">${a.map((x, i) => { const r = rt(x); return `<button class="cv${kind}${x.want ? ' want' : ''}" data-id="${esc(x.id)}"${albumTap(x) ? ' data-kids="1"' : ''} style="--i:${I(i)};--col:${colOf(x)}"><div class="bk vt${C.side === 'right' ? '' : ' r'}"><div class="fc">${phHTML(x, { dust: true })}</div><span class="ed"></span></div><b>${esc(x.title)}</b><small>${r ? starsHTML(r) : esc(stLabel(x.cat, x.status))}</small>${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</button>` + (ui.open.has(x.id) && canKids(x) ? `<div class="kidsrow">${kidsHTML(x)}</div>` : ''); }).join('')}</div>`;
   } else {
-    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${I(i)}"><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? `<span class="pill">${esc(wantForm(x) || 'ほしい')}</span>` : ''}${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>` + (ui.open.has(x.id) && canKids(x) ? `<li class="kidsli">${kidsHTML(x)}</li>` : ''); }).join('')}</ul>`;
+    el.innerHTML = `<ul class="rows">${a.map((x, i) => { const r = rt(x), p = progText(x); return `<li><button class="row" data-id="${esc(x.id)}"${albumTap(x) && canKids(x) ? ' data-kids="1"' : ''} style="--i:${I(i)}"><span class="th vt${x.cat === 'music' ? ' sq' : ''}">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${esc(meta(x)) || '　'}</small><span class="pill${x.status === 'doing' ? ' doing' : ''}">${esc(stLabel(x.cat, x.status))}${p ? '　' + p : ''}</span>${x.round > 1 ? `<span class="pill">${x.round}回目</span>` : ''}${x.hours ? `<span class="pill">${x.hours}時間</span>` : ''}${x.want ? `<span class="pill">${esc(wantForm(x) || 'ほしい')}</span>` : x.wish ? `<span class="pill">${esc(wishTxt(x))}</span>` : ''}${xbtn(x)}${albumTap(x) ? `<span class="xbtn${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'} ${x.vols ? x.vols + '曲' : '曲'}</span>` : ''}</span><span class="rt">${r ? `<b class="num">${r}</b><br>${starsHTML(r)}` : '<small>—</small>'}</span></button></li>` + (ui.open.has(x.id) && canKids(x) ? `<li class="kidsli">${kidsHTML(x)}</li>` : ''); }).join('')}</ul>`;
   }
   if (S.cat === 'music' && ui.kind === 'song') el.insertAdjacentHTML('beforeend', albumTracksHTML());
   if (shHead) el.insertAdjacentHTML('afterbegin', shHead);
@@ -681,7 +683,7 @@ function nextGroups(cat) {
     take('ライブ', '近い順', a.filter((x) => kindOf(x) === 'live' && x.tst !== 'went' && x.tst !== 'lose' && (!x.ldate || dayDiff(x.ldate) >= 0)).sort((x, y) => (x.ldate || '9').localeCompare(y.ldate || '9')), 'live');
     take('聴いてる', '', a.filter((x) => x.status === 'doing' && kindOf(x) !== 'live').sort(upd), 'doing');
     take('まだ聴いてない', '', a.filter((x) => x.status === 'none' && !x.want && kindOf(x) !== 'live').sort((x, y) => y.created - x.created), 'none');
-    take('ほしい', '', a.filter((x) => x.want), 'want');
+    take('ほしい', '', a.filter((x) => x.want || x.wish), 'want');
     return g;
   }
   const ser = a.filter((x) => x.series && (x.vols || x.unit === 'ep') && x.status !== 'pause');
@@ -690,7 +692,7 @@ function nextGroups(cat) {
   take(cat === 'manga' || cat === 'book' ? '続きを読む' : cat === 'anime' ? '続きを観る' : 'シリーズの続き', '', ser.filter((x) => canRead(x) && !x.want && !(x.status === 'done' && x.done)).sort(upd), 'cont');
   take(cat === 'game' ? 'プレイ中' : '途中', '', a.filter((x) => x.status === 'doing' && !x.series).sort(upd), 'doing');
   take({ manga: '未読（積んでる）', book: '未読（積んでる）', anime: 'まだ観てない', movie: 'まだ観てない', game: '未プレイ' }[cat], '', a.filter((x) => x.status === 'none' && !x.want).sort((x, y) => y.created - x.created), 'none');
-  take('ほしい', '', a.filter((x) => x.want), 'want');
+  take('ほしい', '', a.filter((x) => x.want || x.wish), 'want');
   return g;
 }
 const nextCount = () => nextGroups(S.cat).reduce((s, g) => s + g.list.length, 0);
@@ -716,6 +718,7 @@ function drawNext() {
       if (x.until) { const d = dayDiff(x.until); due = `<span class="due${d <= 14 ? ' soon' : ''}">${d === 0 ? '今日' : d}<small>${d === 0 ? 'まで' : '日後まで'}<br>${x.until.slice(5).replace('-', '/')}</small></span>`; }
     } else if (g.kind === 'doing') line = esc(progText(x) || meta(x) || stLabel(x.cat, x.status)) + (dustLv(x) ? '　<em>ほこりをかぶってる</em>' : '');
     else if (g.kind === 'pwant') { const w = partsOf(x).filter((q) => q.want), sum = w.reduce((t, q) => t + (q.p || 0), 0); line = `<em>${esc(rangeText(w.map((q) => q.i)))}巻</em>${S.set.money && sum ? `　${yen(sum)}` : ''}　${esc(meta(x))}`; }
+    else if (g.kind === 'want' && x.wish && !x.want) line = `<em>${esc(wishTxt(x))}</em>　${esc(stLabel(x.cat, x.status))}${S.set.money && x.wishP ? `　${yen(x.wishP)}` : ''}`;
     else if (g.kind === 'want' && x.media) line = `<em>${esc(wantForm(x))}</em>　${esc(meta(x))}`;
     else line = esc(meta(x)) || esc(stLabel(x.cat, x.status));
     return `<div class="nrow" style="--i:${Math.min(i++, 30)}"><button class="open" data-oid="${esc(x.id)}"><span class="th">${phHTML(x)}</span><span class="tx"><b>${esc(x.title)}</b><small>${line}</small></span></button>${act}${due}</div>`;
@@ -737,6 +740,7 @@ function relHTML(x) {
   const d = dayDiff(x.rel), W = relWord(x), what = W.what;
   return `<div class="sec"><div class="box relbox"><span><small>${esc(what)}の${W.day}</small><b class="num">${+x.rel.slice(0, 4)}/${+x.rel.slice(5, 7)}/${+x.rel.slice(8)}</b></span>${d > 0 ? `<span class="num rd">あと<b>${d}</b>日</span>` : `<button class="btn sm pri" data-nx="rel" data-nid="${esc(x.id)}">${d === 0 ? `今日${W.v}！出た` : '出た'}</button>`}</div></div>`;
 }
+const wishTxt = (x) => (x.wish ? `${x.wishM ? x.wishM + 'で' : '手元に'}ほしい` : '');
 const wantForm = (x) => (x.want && x.media ? `${x.media}${x.cat === 'anime' || x.cat === 'movie' ? 'で観たい' : 'でほしい'}` : '');
 function haveHTML(x) {
   const r = [];
@@ -744,6 +748,7 @@ function haveHTML(x) {
   if (x.want && x.media) r.push(['ほしい形', esc(wantForm(x))]); else if (x.media) r.push(['持ち方', esc(x.media)]);
   if (x.app && !x.want) r.push([x.media === '配信' ? '配信サービス' : 'アプリ', esc(x.app)]);
   if (x.where && !x.want) r.push(['置き場所', esc(x.where)]);
+  if (x.wish && !x.want) r.push(['手元に', `${esc(wishTxt(x))}${S.set.money && x.wishP ? `　<span class="num">${yen(x.wishP)}</span>（合計には入らない）` : ''}　<button class="lnk" data-act="wishbuy">買った ›</button>`]);
   if (x.theater) r.push(['劇場', esc(x.theater) + (x.seat ? `　座席 ${esc(x.seat)}` : '')]);
   else if (x.seat) r.push(['座席', esc(x.seat)]);
   if (x.fmt.length) r.push(['形式', x.fmt.map(esc).join('・')]);
@@ -992,8 +997,20 @@ async function mergeSeasons(x, list) {
   touch(x);
 }
 function drawVnotes(x) {
-  const C = Cx(x), l = Object.entries(x.v).filter(([k, d]) => d && (d.c || d.r)).sort((a, b) => a[0] - b[0]);
-  $('#pVnotes').innerHTML = l.length ? `<div class="sec"><h4>${C.vol}ごとの感想（${l.length}）</h4><div class="box vnotes"><ul style="margin:0">${l.map(([k, d]) => `<li><button data-vopen="${k}" style="text-align:left;width:100%"><b>${C.volN(k)}</b>${d.r ? `<span class="num">★${d.r}</span>` : ''}${d.c ? `<br><span class="txt" style="font-size:14px">${esc(d.c)}</span>` : ''}</button></li>`).join('')}</ul></div></div>` : '';
+  const C = Cx(x), all = Object.entries(x.v).filter(([k, d]) => d && (d.c || d.r) && (!x.vols || +k <= x.vols)).map(([k, d]) => [+k, d]);
+  if (!all.length) { $('#pVnotes').innerHTML = ''; return; }
+  const old = ui.vnOrd === 'old', l = all.sort((a, b) => (old ? a[0] - b[0] : b[0] - a[0])), open = ui.vnAll === x.id, lim = open ? l.length : 5;
+  const rs = all.map(([, d]) => d.r).filter((r) => r > 0), avg = rs.length ? (rs.reduce((a, r) => a + r, 0) / rs.length).toFixed(1) : '';
+  const sea = seasoned(x), pm = partMode(x), grp = pm && (x.parts || []).length;
+  const lab = (k) => { if (sea) { const p = partOf(x, k); return p ? `第${k - p.from + 1}話` : `第${k}話`; } return C.volN(k); };
+  let last = null, h = '';
+  for (const [k, d] of l.slice(0, lim)) {
+    if (grp) { const p = partOf(x, k), nm = p ? p.name : sea ? '' : 'まだ巻に入ってない話'; if (nm !== last) { h += `<li class="vng">${esc(nm)}</li>`; last = nm; } }
+    h += `<li><button class="vn" data-vopen="${k}"><span class="vnh"><b>${esc(lab(k))}</b>${d.r ? starsHTML(d.r) : ''}</span>${d.c ? `<span class="vnc">${esc(d.c)}</span>` : ''}</button></li>`;
+  }
+  const strip = rs.length >= 5 ? `<div class="vnbar" aria-hidden="true">${all.slice().sort((a, b) => a[0] - b[0]).filter(([, d]) => d.r > 0).slice(-60).map(([k, d]) => `<i style="height:${Math.round(d.r / 5 * 100)}%" title="${esc(lab(k))} ★${d.r}"></i>`).join('')}</div>` : '';
+  $('#pVnotes').innerHTML = `<div class="sec"><div class="vnhead"><h4>${C.vol}ごとの感想（${all.length}）</h4><div class="seg sm vnord"><button data-act="vnord" data-o="new" class="${old ? '' : 'on'}">新しい順</button><button data-act="vnord" data-o="old" class="${old ? 'on' : ''}">古い順</button></div></div>
+    <div class="box vnotes">${avg ? `<p class="vnavg">${C.vol}の平均 <b class="num">★${avg}</b><small>（評価${rs.length}件）</small></p>` : ''}${strip}<ul class="vnl">${h}</ul>${l.length > 5 ? `<button class="lnk vnmore" data-act="vnall">${open ? 'たたむ ▴' : `残り${l.length - 5}件も見る ▾`}</button>` : ''}</div></div>`;
 }
 function drawProg(x) {
   let h = '';
@@ -1262,7 +1279,7 @@ function openEdit(id) {
   f.tracks.value = x && cat === 'music' ? Array.from({ length: x.vols || 0 }, (_, i) => (x.v[i + 1] && x.v[i + 1].t) || '').join('\n') : '';
   f.page.value = draft.page || ''; f.pages.value = draft.pages || ''; f.pct.value = draft.pct !== '' && draft.pct != null ? draft.pct : ''; f.hours.value = draft.hours || '';
   f.platform.value = draft.platform || ''; f.app.value = draft.app || ''; f.where.value = draft.where || ''; f.theater.value = draft.theater || ''; f.seat.value = draft.seat || '';
-  f.price.value = draft.price || ''; f.priceArt.value = draft.price || ''; f.reldate.value = draft.rel || '';
+  f.price.value = draft.price || ''; f.wishP.value = draft.wishP || ''; f.priceArt.value = draft.price || ''; f.reldate.value = draft.rel || '';
   $('#stSeg').closest('.grp').hidden = false; $('#mediaSeg').hidden = false; $('#liveMoney').hidden = true; $('#oldRow').hidden = false;
   $('#kindF').hidden = !KINDS[cat]; drawKind(); $('#musicF').hidden = cat !== 'music'; $('#unitF').hidden = !(cat === 'manga' || cat === 'book');
   $('#relF').hidden = cat === 'art';
@@ -1319,6 +1336,8 @@ function drawUnit() {
   const Cd = Cx(draft), ep = draft.unit === 'ep';
   $$('#unitSeg button').forEach((b) => b.classList.toggle('on', (ep ? 'ep' : 'vol') === b.dataset.unit));
   if (Cd.ser) { $('#volsL').textContent = Cd.ser.volsL; $('#curL').textContent = Cd.ser.curL; }
+  const tate = isTate(draft); $('#unitF').hidden = !(draft.cat === 'manga' || draft.cat === 'book') || tate; $('#ownF').hidden = !CATS[draft.cat].own || tate;
+  if (tate) $('#ownL').textContent = '';
   const sea = seasoned(draft); $('#fEdit').vols.readOnly = sea; if (sea) { $('#volsL').textContent = '全部の話数（シーズンの合計。変えるのは作品のページのシーズンから）'; $('#curL').textContent = '観たところ（1期からの通しの話数）'; }
   drawRelL(); drawProgF();
   $('#ownL').textContent = ep ? '持ってる単行本（巻・飛び飛びでもOK。空でもOK）' : draft.cat === 'game' ? '持ってる作品（何作目か。飛び飛びでもOK。空なら記録しない）' : '持ってる巻（飛び飛びでもOK。空なら記録しない）';
@@ -1374,6 +1393,10 @@ function drawProgF() {
 function drawHave() {
   const C = CATS[draft.cat], m = draft.media || '';
   if (!C.media) return;
+  $('#wishRow').hidden = !!draft.want; setSw('#wishSw', !!draft.wish); $('#wishF').hidden = !!draft.want || !draft.wish;
+  $('#wishSeg').innerHTML = C.media.filter((k) => !['配信', '映画館', 'テレビ', '両方'].includes(k)).map((k) => `<button type="button" data-wishm="${k}" class="${draft.wishM === k ? 'on' : ''}">${k}</button>`).join('');
+  $('#wishPF').hidden = !S.set.money;
+  $('#wishL').firstChild.textContent = draft.cat === 'anime' || draft.cat === 'movie' ? '手元にもほしい（ディスクなど）' : draft.cat === 'music' ? '手元にもほしい（CD・レコードなど）' : '手元にもほしい';
   $('#mediaSeg').innerHTML = C.media.map((k) => `<button type="button" data-media="${k}" class="${m === k ? 'on' : ''}">${k}</button>`).join('');
   $('#pfF').hidden = draft.cat !== 'game';
   const w = !!draft.want, appOn = !w && ['電子', '両方', '配信'].includes(m), whereOn = !w && ['紙', '両方', 'ディスク', 'パッケージ'].includes(m);
@@ -1429,7 +1452,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
     pages, page: book ? (pages ? Math.min(int(f.page.value), pages) : int(f.page.value)) : 0,
     pct: game && !ser && f.pct.value.trim() !== '' ? Math.min(100, int(f.pct.value)) : '',
     hours: game ? dec(f.hours.value) || '' : '',
-    platform: game ? f.platform.value.trim() : '', media: m, kind: draft.cat === 'anime' ? (draft.kind === 'drama' ? 'drama' : '') : isM ? mk : '', rel: draft.cat === 'art' || mk === 'live' ? '' : f.reldate.value, app: appOn ? f.app.value.trim() : '', where: whereOn ? f.where.value.trim() : '',
+    platform: game ? f.platform.value.trim() : '', media: m, wish: !draft.want && !!draft.wish && !!C.media, wishM: !draft.want && draft.wish ? draft.wishM || '' : '', wishP: !draft.want && draft.wish ? int(f.wishP.value) || 0 : 0, kind: draft.cat === 'anime' ? (draft.kind === 'drama' ? 'drama' : '') : draft.cat === 'manga' ? (draft.kind === 'tate' ? 'tate' : '') : isM ? mk : '', rel: draft.cat === 'art' || mk === 'live' ? '' : f.reldate.value, app: appOn ? f.app.value.trim() : '', where: whereOn ? f.where.value.trim() : '',
     theater: th ? f.theater.value.trim() : '', seat: th ? f.seat.value.trim() : '', fmt: th ? draft.fmt.slice() : [],
     price, pt: !price ? 0 : draft.want ? now : draft.buy === 'unk' ? 0 : draft.buy === 'year' ? (() => { const yy = int(f.buyY.value); return yy >= 1950 && yy <= 2100 ? new Date(yy, 6, 1, 12).getTime() : 0; })() : (x && x.price && x.pt && !(x.want && !draft.want) ? x.pt : now), old: !!draft.old,
     review: f.review.value.trim(), memo: f.memo.value.trim(), tags: [...new Set(f.tags.value.split(/[\s、,，]+/).map((t) => t.replace(/^#/, '').trim()).filter(Boolean))].slice(0, 12),
@@ -1962,7 +1985,8 @@ document.addEventListener('click', (e) => {
   const es = t.closest('#editRate [data-estar]'); if (es) { const i = +es.dataset.estar; draft.rating = draft.rating === i ? i - 0.5 : i; drawEditRate(); $(`#editRate [data-estar="${i}"]`).classList.add('pop'); return; }
   const xs = t.closest('#editExp [data-xstar]'); if (xs) { const i = +xs.dataset.xstar; draft.exp = draft.exp === i ? i - 0.5 : i; drawEditRate(); $(`#editExp [data-xstar="${i}"]`).classList.add('pop'); return; }
   const sw = t.closest('[data-sw]'); if (sw) { draft.color = draft.color === sw.dataset.sw ? '' : sw.dataset.sw; drawSwatches(); drawPhoto(); return; }
-  const kd = t.closest('#kindSeg [data-kind]'); if (kd) { draft.kind = draft.cat === 'anime' ? (kd.dataset.kind === 'drama' ? 'drama' : '') : kd.dataset.kind; if (draft.cat === 'music' && draft.kind === 'live' && !draft.tst) draft.tst = 'apply'; drawKind(); drawMusicF(); drawHave(); drawPhoto(); return; }
+  const wm = t.closest('#wishSeg [data-wishm]'); if (wm) { draft.wishM = draft.wishM === wm.dataset.wishm ? '' : wm.dataset.wishm; drawHave(); return; }
+  const kd = t.closest('#kindSeg [data-kind]'); if (kd) { draft.kind = draft.cat === 'anime' ? (kd.dataset.kind === 'drama' ? 'drama' : '') : draft.cat === 'manga' ? (kd.dataset.kind === 'tate' ? 'tate' : '') : kd.dataset.kind; if (isTate(draft)) { draft.unit = 'ep'; if (!draft.series) { draft.series = true; setSw('#serSw', true); $('#serF').hidden = false; } } drawUnit(); drawProgF(); drawRelL(); if (draft.cat === 'music' && draft.kind === 'live' && !draft.tst) draft.tst = 'apply'; drawKind(); drawMusicF(); drawHave(); drawPhoto(); return; }
   const qp = t.closest('[data-qk]'); if (qp) { const f = $('#fEdit'); f[qp.dataset.qk].value = qp.dataset.qv; drawQP(); if (qp.dataset.qk === 'creator') drawPhoto(); return; }
   const un = t.closest('#unitSeg [data-unit]'); if (un) { draft.unit = un.dataset.unit === 'ep' ? 'ep' : ''; drawUnit(); return; }
   const et = t.closest('[data-etst]'); if (et) { draft.tst = draft.tst === et.dataset.etst ? '' : et.dataset.etst; drawMusicF(); return; }
@@ -1997,6 +2021,13 @@ document.addEventListener('click', (e) => {
     case 'erateclear': draft.rating = 0; drawEditRate(); break;
     case 'xrateclear': draft.exp = 0; drawEditRate(); break;
     case 'dust': if (x) { x.touched = Date.now(); logEv(x, 'dust', 1); save(); renderPage(x); toast('ふっ…きれいになった'); } break;
+    case 'wishbuy': if (x && x.wish) {
+      const wm = x.wishM; if (wm) x.media = (x.cat === 'manga' || x.cat === 'book') && ((x.media === '電子' && wm === '紙') || (x.media === '紙' && wm === '電子')) ? '両方' : wm;
+      if (x.wishP) { if (x.price) x.price += x.wishP; else { x.price = x.wishP; x.pt = Date.now(); } }
+      x.wish = false; x.wishM = ''; x.wishP = 0; logEv(x, 'wbuy', x.media || ''); touch(x); renderPage(x); render(); toast(`買った！${x.media ? `持ち方を「${x.media}」にした` : ''}`);
+    } break;
+    case 'vnord': if (x) { ui.vnOrd = a.dataset.o; drawVnotes(x); } break;
+    case 'vnall': if (x) { ui.vnAll = ui.vnAll === x.id ? '' : x.id; drawVnotes(x); } break;
     case 'partadd': if (x) { const i = addPart(x); touch(x); renderPage(x); openPart(x, i); } break;
     case 'partauto': if (x) {
       const pv = int($('#perVol').value), up = int($('#volUpto').value); if (!pv && !up) { toast('話数か巻数を入れてね'); break; }
@@ -2133,6 +2164,7 @@ document.addEventListener('change', (e) => {
   autoStatus(x, () => { if (curItem() === x) renderPage(x); });
   touch(x); drawSt(x); drawTl(x);
 });
+$('#wishSw').addEventListener('click', () => { draft.wish = !draft.wish; drawHave(); });
 $('#serSw').addEventListener('click', () => { draft.series = !draft.series; setSw('#serSw', draft.series); $('#serF').hidden = !draft.series; drawProgF(); drawEditRate(); drawRelL(); });
 document.addEventListener('change', (e) => {
   const sel = e.target.closest('[data-tsel]'); if (!sel) return;
