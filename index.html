@@ -24,6 +24,7 @@
       <button class="ib" data-act="settings" aria-label="設定"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 5h8M14 5h1M3 9h2M8 9h7M3 13h6M12 13h3"/><circle cx="12.5" cy="5" r="1.5"/><circle cx="6.5" cy="9" r="1.5"/><circle cx="10.5" cy="13" r="1.5"/></svg></button>
     </div>
   </header>
+  <div class="bknudge" id="bknudge" hidden></div>
   <div class="chips" id="chips"></div>
   <div class="chips tags" id="tagchips"></div>
   <div class="chips tags" id="genrechips" hidden></div>
@@ -61,6 +62,7 @@
 <!-- 追加・編集 -->
 <dialog id="dEdit"><form class="sh" method="dialog" id="fEdit">
   <h3 id="editT">追加</h3>
+  <button type="button" class="lnk bulkl" id="bulkLink" data-act="bulkopen" hidden>持ってるものをまとめて登録するなら → まとめて追加 ›</button>
   <div class="photo">
     <div class="pv" id="photoPv"></div>
     <div class="pa">
@@ -71,6 +73,7 @@
   </div>
   <p class="hint" id="photoHint" hidden>巻ごとの写真は、作品のページで巻をタップすると入れられる。</p>
   <label class="f">タイトル<input name="title" required autocomplete="off" maxlength="120"></label>
+  <p class="hint dup" id="dupHint" hidden></p>
   <label class="f adv">よみがな（なくてもOK。入れるとタイトル順が五十音どおりになる）<input name="yomi" autocomplete="off" maxlength="120" placeholder="例：しんげきのきょじん"></label>
   <div class="r2">
     <label class="f"><span id="creatorL">作者</span><input name="creator" list="crList" autocomplete="off" maxlength="80"></label>
@@ -202,9 +205,11 @@
 <!-- トリミング -->
 <dialog id="dCrop"><div class="sh">
   <h3>トリミング</h3>
-  <p class="hint">指でずらして、つまみ（か2本指）で大きさを変える。</p>
+  <div class="seg sm" id="cropMode"><button type="button" data-cm="move" class="on">写真を動かす</button><button type="button" data-cm="free">枠で切り抜く</button></div>
+  <p class="hint" id="cropHint">指でずらして、つまみ（か2本指）で大きさを変える。</p>
   <div class="seg sm" id="cropAr"><button type="button" data-ar="0.6667">縦長</button><button type="button" data-ar="1">正方形</button><button type="button" data-ar="1.6">横長</button></div>
-  <div class="crop" id="cropBox"><img id="cropImg" alt=""></div>
+  <div class="crop" id="cropBox"><img id="cropImg" alt=""><div id="cropSel" hidden><i data-h="tl"></i><i data-h="tr"></i><i data-h="bl"></i><i data-h="br"></i><i data-h="t"></i><i data-h="b"></i><i data-h="l"></i><i data-h="r"></i></div></div>
+  <button type="button" class="lnk" data-act="cropauto" style="justify-self:center">スクショから表紙だけ自動で囲む</button>
   <div class="zoom">小<input type="range" id="cropZ" min="1" max="4" step="0.01" value="1" aria-label="大きさ">大</div>
   <div class="acts"><button type="button" class="btn" data-act="cropraw">そのまま使う</button><button type="button" class="btn pri" data-act="cropok">この範囲で使う</button></div>
 </div></dialog>
@@ -249,6 +254,43 @@
   <div class="acts"><button type="button" class="btn dan" data-act="ptdel" id="ptDel">消す</button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
 </div></dialog>
 
+<dialog id="dColl"><div class="sh">
+  <h3>表紙コラージュ</h3>
+  <p class="hint" style="margin-top:-6px">表紙を並べた1枚の画像にして保存できる。おすすめを送るときにも。</p>
+  <div class="clpv"><canvas id="clCv" width="1080" height="1080"></canvas></div>
+  <p class="hint" id="clInfo" style="margin-top:-8px"></p>
+  <div><span class="hint">何を並べる？</span><div class="seg sm" id="clSrc" style="margin-top:6px"></div></div>
+  <div class="ynav cly" id="clYear"></div>
+  <button type="button" class="btn sm" id="clPickB" data-act="clpick" hidden>作品を選ぶ</button>
+  <div><span class="hint">枚数（横×縦・10×10まで）</span><div id="clSize" style="margin-top:6px"></div></div>
+  <label class="f">見出し（空なら自動。例：〇〇に読んでほしい漫画）<input id="clTitle" maxlength="40" autocomplete="off"></label>
+  <div class="tg"><span>タイトルを入れる</span><button type="button" class="sw2" id="clNameSw" role="switch" aria-checked="true" aria-label="タイトルを入れる"></button></div>
+  <div class="tg"><span>評価の★を入れる</span><button type="button" class="sw2" id="clStarSw" role="switch" aria-checked="false" aria-label="評価を入れる"></button></div>
+  <div class="tg" id="clRecRow"><span>レコード風<small>ジャケットの後ろからレコードがのぞく</small></span><button type="button" class="sw2" id="clRecSw" role="switch" aria-checked="false" aria-label="レコード風"></button></div>
+  <div><span class="hint">背景</span><div class="seg sm" id="clBg" style="margin-top:6px"></div></div>
+  <div class="acts"><button type="button" class="btn" data-act="close">閉じる</button><button type="button" class="btn pri" data-act="clsave" id="clSave">画像を保存</button></div>
+</div></dialog>
+
+<dialog id="dGrp"><div class="sh">
+  <h3 id="grT">まとめ</h3>
+  <div id="grBody" style="display:grid;gap:12px"></div>
+  <button type="button" class="btn pri" data-act="close">閉じる</button>
+</div></dialog>
+
+<dialog id="dBulk"><div class="sh">
+  <h3 id="bkT">まとめて追加</h3>
+  <p class="hint">タイトルを1行に1つ貼り付ける。「タイトル / 作者」で作者も入る。漫画や本は「/ 1-12」みたいに持ってる巻も入れられる。もう登録してあるものは自動で外す。</p>
+  <textarea id="bkTxt" class="vc" style="min-height:140px"></textarea>
+  <div id="bkPrev"></div>
+  <span class="gt">全部に同じ設定</span>
+  <div><span class="hint">状態</span><div class="seg sm" id="bkSt" style="margin-top:6px"></div></div>
+  <div class="tg" id="bkOldRow"><span>前から持ってる・前に読んだもの<small>日付は「時期不明」になって、今年の記録や合計には入らない</small></span><button type="button" class="sw2" id="bkOldSw" role="switch" aria-checked="true" aria-label="前から"></button></div>
+  <div id="bkKindF"><span class="hint">種類</span><div class="seg sm" id="bkKind" style="margin-top:6px"></div></div>
+  <div id="bkMediaF"><span class="hint">持ち方</span><div class="seg sm" id="bkMedia" style="margin-top:6px"></div></div>
+  <div id="bkTagsF"><span class="hint">タグ</span><div class="fchips" id="bkTags" style="margin-top:6px"></div></div>
+  <div class="acts"><button type="button" class="btn" data-act="close">やめる</button><button type="button" class="btn pri" data-act="bulkgo" id="bkGo" disabled>追加する</button></div>
+</div></dialog>
+
 <dialog id="dLink"><div class="sh">
   <h3>同じ曲が見つかった</h3>
   <div id="lkBody"></div>
@@ -285,10 +327,12 @@
 <dialog id="dTower"><div class="sh">
   <h3 id="towT"></h3>
   <div class="seg sm" id="towSeg"></div>
+  <div id="towY" hidden></div>
   <div class="tcount" id="towN"></div>
   <div class="tower" id="tower"></div>
   <div class="towerbase"></div>
   <p class="hint" id="towH"></p>
+  <button type="button" class="lnk" data-act="collopen" style="justify-self:center">表紙コラージュを作る ›</button>
   <button type="button" class="btn sm pri" data-act="close">閉じる</button>
 </div></dialog>
 
@@ -349,6 +393,7 @@
   <h3>設定<small class="ver" id="ver"></small></h3>
   <div class="grp">
     <div class="tg"><span>時間で部屋の明かりが変わる<small>夜（19時〜朝6時）は照明を落とす。芸術の部屋は暗い展示室になる</small></span><button type="button" class="sw2" id="todSw" role="switch" aria-checked="false" aria-label="時間で明かりが変わる"></button></div>
+    <div class="tg"><span>開いた中身を棚にそのまま並べる<small>アルバム・シーズン・続きものの本・まとめを押したとき、中身をほかの作品と同じ形でその場に並べる。オフにすると、今までどおり箱にまとめて出す</small></span><button type="button" class="sw2" id="inlSw" role="switch" aria-checked="true" aria-label="開いた中身を棚にそのまま並べる"></button></div>
     <div class="tg"><span>かんたん追加<small>追加の画面を短くする。よみがな・持ち方・値段・感想などは「もっと詳しく」を押すと出る</small></span><button type="button" class="sw2" id="simpleSw" role="switch" aria-checked="false" aria-label="かんたん追加"></button></div>
     <div class="tg"><span>ほこり<small>しばらく触ってない「途中」の作品に、うっすらほこりが積もる</small></span><button type="button" class="sw2" id="dustSw" role="switch" aria-checked="false" aria-label="ほこり"></button></div>
     <div class="tg"><span>使ったお金を記録する<small>作品や巻ごとに値段を入れると、部屋ごと・年ごとの合計が出る</small></span><button type="button" class="sw2" id="moneySw" role="switch" aria-checked="false" aria-label="使ったお金"></button></div>

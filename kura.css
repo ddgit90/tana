@@ -857,3 +857,115 @@ dialog [autofocus]:focus{outline:none}
 .spine .sgx{position:absolute;z-index:1;left:50%;top:5px;transform:translateX(-50%);writing-mode:horizontal-tb;font-style:normal;font-size:9px;line-height:1;color:var(--fg);opacity:.85}
 .spine .sgx.on{color:var(--acc);opacity:1}
 .shelf .kidsrow.shk .kids.grp{background:color-mix(in srgb,var(--acc) 8%,var(--room2))}
+
+/* ===== v27 バックアップの声かけ ===== */
+.bknudge{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:-4px 0 14px;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--acc) 12%,var(--card));border:1px solid color-mix(in srgb,var(--acc) 40%,var(--line))}
+.bknudge b{display:block;font:600 14px/1.35 var(--mincho)}
+.bknudge small{display:block;margin-top:3px;font-size:12px;line-height:1.5;color:var(--sub)}
+.bkn-a{display:grid;gap:6px;justify-items:center;flex:none}
+/* まとめて追加 */
+.bulkl{justify-self:start;margin-top:-8px;font-size:13px}
+.hint.dup{margin-top:-8px;color:var(--acc)}
+.bkl{list-style:none;margin:0;padding:0;max-height:34dvh;overflow:auto;border-top:1px solid var(--line)}
+.bkl li label{display:flex;gap:10px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
+.bkl li input{flex:none;width:20px;height:20px;accent-color:var(--acc)}
+.bkl li span{min-width:0}
+.bkl li b{display:block;font:600 14px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bkl li small{display:block;font-size:12px;color:var(--sub)}
+.bkl li em{font-style:normal;color:var(--acc);margin-left:6px}
+.bkl li.off b{opacity:.45;text-decoration:line-through}
+/* タワーの年ごと */
+#towY .ynav{margin-bottom:10px}
+.tstat{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.tstat>div{padding:10px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.tstat small{display:block;font-size:11.5px;color:var(--sub)}
+.tstat b{display:block;margin-top:2px;font-size:22px;line-height:1.2;color:var(--ink)}
+.tstat b i{font-style:normal;font-size:12px;margin-left:2px;color:var(--sub)}
+.tmon{display:grid;grid-template-columns:repeat(12,1fr);gap:4px;height:70px;margin-top:14px;align-items:end}
+.tmon span{display:grid;grid-template-rows:1fr auto;height:100%;align-items:end;justify-items:center}
+.tmon i{width:100%;max-width:16px;border-radius:3px 3px 0 0;background:var(--acc)}
+.tmon small{font-size:9.5px;color:var(--sub);margin-top:3px}
+.tyrs{display:flex;gap:6px;height:56px;margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);align-items:end;overflow-x:auto}
+.tyrs button{flex:none;width:30px;height:100%;display:grid;grid-template-rows:1fr auto;align-items:end;justify-items:center}
+.tyrs i{width:16px;border-radius:3px 3px 0 0;background:var(--line)}
+.tyrs .on i{background:var(--acc)}
+.tyrs small{font-size:10px;color:var(--sub);margin-top:2px}
+.tyrs .on small{color:var(--acc);font-weight:700}
+
+/* ===== v28 まとめ ===== */
+.grpl{display:block;width:100%;text-align:left;padding:12px 14px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.grpl b{display:block;font:600 15px/1.35 var(--mincho)}
+.grpl small{display:block;margin-top:3px;font-size:12px;color:var(--sub)}
+#grBody .btn small{font-weight:500;opacity:.75;margin-left:4px}
+.grl{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.grl li{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px solid var(--line)}
+.grl .th{width:32px;height:46px}
+.grl .th.sq{height:32px}
+.grl b{flex:1;min-width:0;font:600 14px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grl b small{display:block;font:500 11.5px/1.3 var(--gothic);color:var(--sub)}
+.grl .mv{display:flex;gap:4px;flex:none}
+.grl .mv button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);font-size:13px}
+.grl .mv button:disabled{opacity:.3}
+.tickets .kidsrow{margin:4px 0 6px}
+.tk.open{outline:2px solid var(--acc);outline-offset:2px}
+#grBody{grid-template-columns:minmax(0,1fr)}
+
+/* ===== v29 開いた中身を棚にそのまま並べる ===== */
+.kidc{position:relative;animation:kidin .35s var(--ease) both}
+@keyframes kidin{from{opacity:0;transform:translateY(6px)}}
+.cv.kidc .bk,.sc.kidc .tv,.jk.kidc .art,.fr.kidc .fm{outline:1.5px dashed color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:3px;border-radius:3px}
+.tk.kidc{outline:1.5px dashed color-mix(in srgb,var(--acc) 70%,transparent);outline-offset:2px}
+.row.kidc{padding-left:14px;border-left:2px solid color-mix(in srgb,var(--acc) 60%,transparent)}
+.sw.kidc .spine{box-shadow:inset 0 -4px 0 var(--acc)}
+.kidend{grid-column:1/-1;flex:0 0 100%;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 14px;align-items:center;margin:2px 0 10px;padding:8px 12px;border-radius:12px;border:1px dashed color-mix(in srgb,var(--acc) 50%,var(--line));font-size:13px}
+li.kidend{list-style:none;margin:6px 0 10px}
+.shelf .kidend{margin:8px 0 12px}
+/* ティアの絞り込み */
+.tierf{display:flex;gap:7px;overflow-x:auto;margin:-4px -16px 14px;padding:2px 16px 4px;scrollbar-width:none}
+.tierf::-webkit-scrollbar{display:none}
+.tierf .chip{flex:none}
+
+/* ===== v30 表紙コラージュ ===== */
+.clpv{border-radius:14px;overflow:hidden;background:var(--field);border:1px solid var(--line)}
+.clpv canvas{display:block;width:100%;height:auto}
+#dColl .seg button{padding-left:8px;padding-right:8px}
+.ynav.cly{margin:0 2px}
+.ynav.cly b{font-size:16px}
+.ynav.cly button{width:34px;height:34px;font-size:16px}
+
+/* ===== v31 枠で切り抜く ===== */
+.crop.free{aspect-ratio:var(--ar);background:#000}
+#cropSel{position:absolute;box-shadow:0 0 0 9999px rgba(0,0,0,.55);outline:2px solid #fff;touch-action:none}
+#cropSel::before,#cropSel::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to right,transparent 33.2%,rgba(255,255,255,.35) 33.3% 33.5%,transparent 33.6% 66.5%,rgba(255,255,255,.35) 66.6% 66.8%,transparent 66.9%)}
+#cropSel::after{background:linear-gradient(to bottom,transparent 33.2%,rgba(255,255,255,.35) 33.3% 33.5%,transparent 33.6% 66.5%,rgba(255,255,255,.35) 66.6% 66.8%,transparent 66.9%)}
+#cropSel i{position:absolute;width:30px;height:30px;z-index:2}
+#cropSel i::after{content:"";position:absolute;background:#fff;border-radius:2px}
+#cropSel [data-h=tl]{left:-15px;top:-15px}#cropSel [data-h=tr]{right:-15px;top:-15px}#cropSel [data-h=bl]{left:-15px;bottom:-15px}#cropSel [data-h=br]{right:-15px;bottom:-15px}
+#cropSel [data-h=tl]::after,#cropSel [data-h=tr]::after,#cropSel [data-h=bl]::after,#cropSel [data-h=br]::after{left:9px;top:9px;width:12px;height:12px;border-radius:50%}
+#cropSel [data-h=t],#cropSel [data-h=b]{left:30%;width:40%}#cropSel [data-h=t]{top:-15px}#cropSel [data-h=b]{bottom:-15px}
+#cropSel [data-h=l],#cropSel [data-h=r]{top:30%;height:40%}#cropSel [data-h=l]{left:-15px}#cropSel [data-h=r]{right:-15px}
+#cropSel [data-h=t]::after,#cropSel [data-h=b]::after{left:calc(50% - 14px);top:13px;width:28px;height:4px}
+#cropSel [data-h=l]::after,#cropSel [data-h=r]::after{top:calc(50% - 14px);left:13px;width:4px;height:28px}
+/* コラージュの枚数 */
+#clSize{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.clst{display:inline-flex;align-items:center;gap:6px;padding:4px 6px;border-radius:14px;border:1px solid var(--line)}
+.clst small{font-size:11px;color:var(--sub);margin:0 2px}
+.clst button{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);font-size:15px}
+.clst b{min-width:20px;text-align:center;font-size:16px}
+.clx{color:var(--sub)}
+.crop.free::before,.crop.free::after{display:none}
+
+/* ===== v32 人ごと ===== */
+.pplsort{margin:0 0 12px}
+.ppl{list-style:none;margin:0;padding:0}
+.ppl li{border-bottom:1px solid var(--line);animation:rowin .4s var(--ease) both;animation-delay:calc(var(--i) * 18ms)}
+.ppl button{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 2px}
+.pth3{display:flex;flex:none;width:64px;height:46px;position:relative}
+.pth3 .th{position:absolute;width:30px;height:44px;margin:0}
+.pth3 .th.sq{height:30px;width:30px;top:8px}
+.pth3 .th:nth-child(1){left:0;z-index:3}.pth3 .th:nth-child(2){left:16px;z-index:2;opacity:.85}.pth3 .th:nth-child(3){left:32px;z-index:1;opacity:.7}
+.ppl .tx{flex:1;min-width:0}
+.ppl .tx b{display:block;font:600 15px/1.35 var(--mincho);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ppl .tx small{font-size:12px;color:var(--sub)}
+.ppl .pr{flex:none;color:var(--acc);font-weight:700;font-size:14px}
+.psub.ppls{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px}

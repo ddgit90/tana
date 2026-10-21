@@ -1,7 +1,7 @@
 // オフラインで動かすための仕組み。
 // ネットにつながっていれば毎回いちばん新しい版を取りに行き（更新がすぐ反映される）、
 // つながらないときだけ保存しておいた版で起動する。
-const CACHE = 'kura-v25';
+const CACHE = 'kura-v32';
 const FILES = ['./', './index.html', './kura.css', './kura.js', './manifest.webmanifest', './icon.png'];
 
 self.addEventListener('install', (e) => {
