@@ -42,6 +42,8 @@
   </div>
   <div class="fbar" id="fbar" hidden></div>
   <div id="list"></div>
+  <div class="dpill" id="densPill" hidden></div>
+  <div class="scrub" id="scrub" hidden></div><div class="scrubB" id="scrubB" hidden></div>
 </div>
 
 <button class="fab" data-act="new" aria-label="追加"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M11 4v14M4 11h14"/></svg></button>
@@ -254,6 +256,77 @@
   <div class="acts"><button type="button" class="btn dan" data-act="ptdel" id="ptDel">消す</button><button type="button" class="btn pri" data-act="close">閉じる</button></div>
 </div></dialog>
 
+<dialog id="dHelp"><div class="sh help">
+  <h3>蔵の使い方</h3>
+  <p class="hint" style="margin-top:-6px">読んだ・観た・聴いたものを、部屋ごとにしまっておく記録の蔵。記録はこのiPhoneの中だけにあって、どこにも送らない。見たいところを押すと開く。</p>
+  <details><summary>部屋</summary><ul>
+    <li>下のバーで、漫画・アニメ・映画・音楽・本・ゲーム・芸術の部屋を切り替える。</li>
+    <li>使わない部屋は、設定の「表示する部屋」で隠せる（記録は消えない）。</li>
+    <li>上の「つぎ・すべて・未読…」のチップで、状態ごとに見られる。</li>
+  </ul></details>
+  <details><summary>追加・編集</summary><ul>
+    <li>右下の＋で追加。タイトル以外はあとからでいい。</li>
+    <li>状態は「まだ・途中・済み・中断・ほしい」。星は同じ星をもう一度押すと半分（★4.5とか）。</li>
+    <li>持ってるものをまとめて登録するなら、追加画面の上の「まとめて追加」。1行に1作品で貼り付けるだけ。「タイトル / 作者 / 1-12」みたいに書くと作者と持ってる巻も入る。</li>
+    <li>同じタイトルがもう登録してあると教えてくれる。</li>
+    <li>設定の「かんたん追加」をオンにすると、追加画面が短くなる。</li>
+  </ul></details>
+  <details><summary>表紙の写真</summary><ul>
+    <li>追加・編集画面の「写真を選ぶ」から。</li>
+    <li>「写真を動かす」は、枠の中で写真をずらして大きさを変えるやり方。</li>
+    <li>「枠で切り抜く」は、枠の角や辺を動かして好きな形で切り抜く。表紙のふちに近づけると吸いつく。</li>
+    <li>スクショなら「スクショから表紙だけ自動で囲む」で、まわりの余計なところを避けて囲んでくれる。</li>
+  </ul></details>
+  <details><summary>見え方を変える</summary><ul>
+    <li>上の4つのボタンで「棚・表紙・リスト・ランキング」を切り替える。</li>
+    <li>2本指でつまむと、遠くから見るみたいに小さく並ぶ（部屋・見え方ごとに覚える）。全部が画面に収まったらそれ以上は小さくならない。左下の「元の大きさ」で戻る。</li>
+    <li>作品が多いと右端に「あ・か・さ…」や年が出る。なぞるとその場所まで飛べる（並び順に合わせて変わる）。</li>
+    <li>アルバム・シーズンのあるアニメ・続きものの本・まとめは、押すとその場で中身が並ぶ。もう一回押すと閉じる。</li>
+  </ul></details>
+  <details><summary>絞り込み・タグ・棚</summary><ul>
+    <li>「絞り込み」でタグや作者、持ち方などをいくつか選んで「絞り込む」。</li>
+    <li>タグはグループ（ジャンル・俳優・気分など）に分けて並べられる。</li>
+    <li>棚は自分で作る本棚。「殿堂入り」みたいに好きな作品を入れておける。</li>
+  </ul></details>
+  <details><summary>シリーズ・巻・シーズン・まとめ</summary><ul>
+    <li><b>シリーズもの</b>：巻ごと（話ごと）に写真・評価・感想、どこまで読んだか、持ってる巻を残せる。</li>
+    <li><b>話で数える</b>：漫画や本を1話ずつ記録。単行本の巻も作れて、巻ごとに表紙・評価・持ってる／ほしい・値段を残せる。縦読みの作品は「種類」で縦読みにすると巻は出ない。</li>
+    <li><b>シーズン</b>：アニメの1期・2期…を1つの作品の中に作る。話はシーズンごとに第1話から。</li>
+    <li><b>まとめ</b>：ジョジョの3部・4部みたいな、同じシリーズの別の作品を一覧で1枚にまとめる。ティア表ではそれぞれ別に並ぶ。</li>
+    <li><b>関連作品</b>：原作とアニメ、主題歌みたいに、部屋をまたいでつなげる。</li>
+  </ul></details>
+  <details><summary>音楽</summary><ul>
+    <li>種類は「シングル・アルバム・ライブ」。アルバムは曲ごとに星と感想を付けられる。</li>
+    <li>シングルとアルバムの中の同じ曲は自動でつながって、評価と感想が共通になる。</li>
+    <li>マイブームは月に5つまで。年間ベスト10を選ぶとき上に出る。</li>
+    <li>ジャンルを「クラシック」にすると、作曲家と演奏者を分けて記録できる。</li>
+  </ul></details>
+  <details><summary>ランキング</summary><ul>
+    <li>ティア表は星で自動で段に分かれる。段の名前を押すと、段の中の順番を決められる。上のチップでまとめ・タグごとに絞れる。</li>
+    <li>「期待との差」は、始める前の期待度と実際の評価の差。</li>
+    <li>年間ベスト10と、作者・監督ごとの一覧もここ。</li>
+  </ul></details>
+  <details><summary>つぎ・タワー・コラージュ・お金</summary><ul>
+    <li>「つぎ」は続き、発売日、ほしいもの、積んでるものがまとまって出る。</li>
+    <li>上のタワーのボタンで、積んでる・途中・年ごとのまとめ（読んだ数・月ごとのグラフ）が見られる。</li>
+    <li>タワーの下か年間ベスト10の下から、表紙を並べた1枚の画像（コラージュ）を作って保存できる。おすすめを送るときにも。</li>
+    <li>設定で「使ったお金」をオンにすると、作品・巻ごとの値段から年ごとの合計が出る。ほしい物は買うまで合計に入らない。</li>
+  </ul></details>
+  <details><summary>バックアップ</summary><ul>
+    <li>記録はこのiPhoneの中にしかない。設定の「バックアップ」からファイルに保存しておくと安心（iCloud Driveがおすすめ）。</li>
+    <li>前の保存から30日たつと、部屋の上で声をかける。</li>
+    <li>機種変更のときは、新しいiPhoneで「戻す」からそのファイルを選ぶ。</li>
+  </ul></details>
+  <details><summary>ちょっとしたコツ</summary><ul>
+    <li>下から出てくる画面は、下に引っぱると閉じる。入れかけの内容があるときは確認が出る。</li>
+    <li>作者が2人以上なら「原作：〇〇／作画：△△」みたいに「／」「、」「×」で区切ると、別々の人として数える（「原作：」などは自動で外れる）。半角の「/」だけだと区切らない。</li>
+    <li>メモや感想にURLを貼ると、作品のページで押せるリンクになる。</li>
+    <li>読んだあとで手元にもほしくなったら、持ち方の「手元にもほしい」。買ったら作品のページの「買った ›」。</li>
+    <li>更新したのに変わらないときは、アプリを完全に閉じて開き直す（設定のタイトル横の番号で確認できる）。</li>
+  </ul></details>
+  <button type="button" class="btn pri" data-act="close">閉じる</button>
+</div></dialog>
+
 <dialog id="dColl"><div class="sh">
   <h3>表紙コラージュ</h3>
   <p class="hint" style="margin-top:-6px">表紙を並べた1枚の画像にして保存できる。おすすめを送るときにも。</p>
@@ -391,6 +464,7 @@
 <!-- 設定 -->
 <dialog id="dSet"><div class="sh">
   <h3>設定<small class="ver" id="ver"></small></h3>
+  <button type="button" class="helpb" data-act="help"><b>蔵の使い方・できること</b><small>はじめての人向けの説明と、ちょっとしたコツ</small><span>›</span></button>
   <div class="grp">
     <div class="tg"><span>時間で部屋の明かりが変わる<small>夜（19時〜朝6時）は照明を落とす。芸術の部屋は暗い展示室になる</small></span><button type="button" class="sw2" id="todSw" role="switch" aria-checked="false" aria-label="時間で明かりが変わる"></button></div>
     <div class="tg"><span>開いた中身を棚にそのまま並べる<small>アルバム・シーズン・続きものの本・まとめを押したとき、中身をほかの作品と同じ形でその場に並べる。オフにすると、今までどおり箱にまとめて出す</small></span><button type="button" class="sw2" id="inlSw" role="switch" aria-checked="true" aria-label="開いた中身を棚にそのまま並べる"></button></div>

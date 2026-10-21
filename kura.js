@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v32';
+const VER = 'v33';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -633,7 +633,8 @@ function spineHTML(x, i) {
   const vb = x.series && x.unit === 'ep' ? (x.cur ? `${x.cur}話` : '') : x.series && x.vols ? `${x.cur}/${x.vols}` : x.cat === 'book' && x.pages && x.page && x.status === 'doing' ? `${Math.round(x.page / x.pages * 100)}%` : gm && !x.series && x.pct && x.status === 'doing' ? `${x.pct}%` : r ? '★' + r : '';
   return `<div class="sw"><button class="spine vt${gm ? ' game' : ''}${x.want ? ' want' : ''}${gold ? ' gold' : ''}" data-id="${esc(x.id)}"${grpTap(x) ? ' data-kids="1"' : ''} style="--w:${w}px;--h:${h}px;--col:${c};--fg:${fgOf(c)};--i:${Math.min(i, 30)};--fs:${fs.toFixed(1)}px${gm ? `;--pc:${pfColor(x.platform)}` : ''}" aria-label="${esc(x.title)}">${gm && !x.want ? '<i class="pf"></i>' : ''}${dk ? `<i class="dc d-${dk}"></i>` : ''}${x.status === 'doing' ? '<i class="rib"></i>' : ''}<span${two ? ' class="two"' : ''}>${esc(x.title)}</span>${vb ? `<em class="vb">${esc(vb)}</em>` : ''}${grpTap(x) ? `<em class="sgx${ui.open.has(x.id) ? ' on' : ''}">${ui.open.has(x.id) ? '▴' : '▾'}</em>` : ''}${dustHTML(x)}</button></div>`;
 }
-function drawList(anim = false) {
+function drawList(anim = false) { drawList0(anim); try { applyDens(); buildScrub(); } catch (e) { console.error(e); } }
+function drawList0(anim = false) {
   const C = CATS[S.cat], view = S.view[S.cat], el = $('#list');
   el.classList.toggle('anim', !!anim && !reduced);
   if (ui.filter === 'next') return drawNext();
@@ -1984,6 +1985,85 @@ function doBulk() {
   save(); $('#dBulk').close(); render(); toast(`${rows.length}件追加した`);
 }
 
+/* ===== 2本指でつまむと、遠くから見るみたいに小さく並ぶ（部屋・表示ごとに覚える） ===== */
+let DENS = (() => { try { return JSON.parse(localStorage['kura.dens'] || '{}'); } catch (e) { return {}; } })();
+const densKey = () => `${S.cat}:${S.view[S.cat]}`;
+const densOf = () => DENS[densKey()] || 1;
+function applyDens() {
+  const z = densOf(), el = $('#list');
+  el.style.zoom = z === 1 ? '' : String(z); el.classList.toggle('dense', z < 0.6); el.classList.toggle('dense2', z < 0.4);
+  const p = $('#densPill'); p.hidden = z === 1; if (z !== 1) p.innerHTML = `<span>${Math.round(z * 100)}%</span><button data-act="densreset">元の大きさ</button>`;
+}
+function setDens(z) {
+  z = Math.round(clamp(z, 0.15, 1) * 100) / 100; if (z >= 0.96) z = 1;
+  if (z === 1) delete DENS[densKey()]; else DENS[densKey()] = z;
+  applyDens();
+  /* 全部が画面に収まったら、それ以上は小さくしない */
+  const el = $('#list'), fits = () => el.getBoundingClientRect().height <= innerHeight * 0.72;
+  if (z < 1 && fits()) { let k = 0; while (k++ < 12 && densOf() < 1) { const nz = Math.min(1, densOf() + 0.05); DENS[densKey()] = nz; applyDens(); if (!fits()) { DENS[densKey()] = Math.round((nz - 0.05) * 100) / 100; applyDens(); break; } } if (densOf() >= 0.96) { delete DENS[densKey()]; applyDens(); } }
+  try { localStorage['kura.dens'] = JSON.stringify(DENS); } catch (e) {}
+  buildScrub();
+}
+(() => {
+  const el = $('#list'); let g = null;
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  el.addEventListener('touchstart', (e) => { if (e.touches.length === 2) { const r = el.getBoundingClientRect(); g = { d0: dist(e.touches), z0: densOf(), on: false, ox: (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left, oy: (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top }; } else if (e.touches.length > 2) g = null; }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!g || e.touches.length !== 2) return;
+    const r = dist(e.touches) / g.d0; if (!g.on && Math.abs(r - 1) < 0.1) return; /* 少し動いただけでは反応しない */
+    g.on = true; e.preventDefault(); g.z = clamp(g.z0 * r, 0.15, 1);
+    const z0 = g.z0; el.style.transformOrigin = `${g.ox / z0}px ${g.oy / z0}px`; el.style.transform = `scale(${g.z / z0})`;
+    const p = $('#densPill'); p.hidden = false; p.innerHTML = `<span>${Math.round(g.z * 100)}%</span>`;
+  }, { passive: false });
+  const end = (e) => { if (!g || (e.touches && e.touches.length >= 2)) return; const gg = g; g = null; if (gg.on) { el.style.transform = ''; el.style.transformOrigin = ''; setDens(gg.z); } };
+  el.addEventListener('touchend', end); el.addEventListener('touchcancel', end);
+})();
+
+/* ===== 右端の早送り（なぞるとその場所へ） ===== */
+const KROWS = [['あ', 'あ'], ['か', 'か'], ['さ', 'さ'], ['た', 'た'], ['な', 'な'], ['は', 'は'], ['ま', 'ま'], ['や', 'や'], ['ら', 'ら'], ['わ', 'わ']];
+function kanaRow(s) {
+  const c = norm(String(s || '').trim()).charAt(0); if (!c) return '#';
+  if (/[0-9]/.test(c)) return '#'; if (/[a-z]/.test(c)) return 'A';
+  if (/[ぁ-ゖ]/.test(c)) { let r = 'あ'; for (const [k, st] of KROWS) if (coll.compare(c, st) >= 0) r = k; return r; }
+  return '他';
+}
+function secKey(x) {
+  if (x._grp) x = x._cv;
+  switch (S.sort) {
+    case 'title': return kanaRow(x.yomi || x.title);
+    case 'creator': return x.creator ? kanaRow(x.creator) : '—';
+    case 'rate': { const r = rt(x); return r ? `★${Math.floor(r)}` : '—'; }
+    case 'upd': return String(new Date(x.updated).getFullYear()).slice(2) + '年';
+    default: return String(new Date(x.created).getFullYear()).slice(2) + '年';
+  }
+}
+let SCRUB = [];
+function buildScrub() {
+  const bar = $('#scrub'), view = S.view[S.cat]; SCRUB = [];
+  if (ui.filter === 'next') { bar.hidden = true; document.body.classList.remove('scrubon'); return; }
+  if (view === 'rank') { if (ui.rtab === 'tier' || !ui.rtab) for (const t of $$('#list .tier:not(.empty-t)')) SCRUB.push([t.querySelector('.tlab b') ? t.querySelector('.tlab b').textContent : '?', t]); }
+  else {
+    const cards = $$('#list [data-id]').filter((c) => !c.closest('.kids') && !c.classList.contains('kidc') && !(c.closest('.kidc')));
+    if (cards.length >= 25) { let last = null; for (const c of cards) { const id = c.dataset.id, x = id.startsWith('g:') ? (S.groups || []).map((g) => g.id === id.slice(2) && grpMembers(g)[0]).find(Boolean) : findItem(id); if (!x) continue; const k = secKey(x); if (k !== last) { SCRUB.push([k, c]); last = k; } } }
+  }
+  bar.hidden = SCRUB.length < 3; document.body.classList.toggle('scrubon', !bar.hidden); if (bar.hidden) return;
+  bar.innerHTML = SCRUB.map(([k], i) => `<b data-si="${i}">${esc(k)}</b>`).join('');
+}
+(() => {
+  const bar = $('#scrub'), bub = $('#scrubB');
+  const go = (e) => {
+    const t = e.touches ? e.touches[0] : e, r = bar.getBoundingClientRect(), i = clamp(Math.floor((t.clientY - r.top) / r.height * SCRUB.length), 0, SCRUB.length - 1), s = SCRUB[i]; if (!s) return;
+    const y = s[1].getBoundingClientRect().top + scrollY - 110; scrollTo(0, Math.max(0, y));
+    bub.textContent = s[0]; bub.hidden = false; bub.style.top = `${clamp(t.clientY - 28, r.top - 20, r.bottom - 36)}px`;
+    $$('#scrub b').forEach((b, j) => b.classList.toggle('on', j === i));
+  };
+  const stop = () => { bub.hidden = true; $$('#scrub b.on').forEach((b) => b.classList.remove('on')); };
+  bar.addEventListener('touchstart', (e) => { e.preventDefault(); go(e); }, { passive: false });
+  bar.addEventListener('touchmove', (e) => { e.preventDefault(); go(e); }, { passive: false });
+  bar.addEventListener('touchend', stop); bar.addEventListener('touchcancel', stop);
+  bar.addEventListener('mousedown', (e) => { go(e); setTimeout(stop, 600); });
+})();
+
 /* ===== 表紙コラージュ（1枚の画像にして保存・おすすめにも） ===== */
 const clg = { src: 'year', y: new Date().getFullYear(), n: 3, m: 3, names: true, stars: false, rec: false, bg: 'dark', title: '', sel: [] };
 const COLL_FONT = '"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif', COLL_GOTH = '"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif';
@@ -2468,6 +2548,8 @@ document.addEventListener('click', (e) => {
     case 'collbest': openColl('best', ui.byear); break;
     case 'clpick': collPick(); break;
     case 'clsave': saveColl(); break;
+    case 'densreset': setDens(1); break;
+    case 'help': $('#dHelp').showModal(); break;
     case 'bknow': prepExport(); break;
     case 'bklater': S.set.bkSnooze = Date.now() + 7 * 864e5; save(); drawBkNudge(); toast('1週間後にまた声をかける'); break;
     case 'bulkopen': { const d = $('#dEdit'); if (canClose(d)) { d.close(); setTimeout(openBulk, 120); } break; }
