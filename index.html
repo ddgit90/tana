@@ -30,7 +30,7 @@
   <div class="chips tags" id="genrechips" hidden></div>
   <div class="tools">
     <div class="sbox"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg><input class="search" id="q" type="search" placeholder="タイトル・よみ・名前・タグ" autocomplete="off" aria-label="検索"></div>
-    <select class="sortsel" id="sort" aria-label="並べ替え"></select>
+    <div class="sortw"><button type="button" class="sortsel" id="sortB" aria-label="並べ替え"></button><div class="sortm" id="sortM" hidden></div></div>
     <button class="fbtn" id="fbtn" data-act="filt" aria-label="タグで絞り込む"></button>
     <div class="views" id="views" role="tablist" aria-label="表示">
       <span class="vi"></span>
@@ -81,6 +81,8 @@
     <label class="f"><span id="creatorL">作者</span><input name="creator" list="crList" autocomplete="off" maxlength="80"></label>
     <label class="f adv">年<input name="year" inputmode="numeric" autocomplete="off" maxlength="6" placeholder="例：2019"></label>
   </div>
+  <p class="hint parhint" id="parHint" hidden></p>
+  <div class="rolepick" id="rolePick" hidden></div>
   <div class="tagpick qpick" data-q="creator"></div>
   <div id="kindF"><span class="hint">種類</span><div class="seg sm" id="kindSeg" style="margin-top:6px"></div></div>
   <div id="musicF">
@@ -279,6 +281,7 @@
   </ul></details>
   <details><summary>見え方を変える</summary><ul>
     <li>上の4つのボタンで「棚・表紙・リスト・ランキング」を切り替える。</li>
+    <li>並べ替え（追加順など）は、同じのをもう一度押すと上下が逆になる（↓↑で表示）。</li>
     <li>2本指でつまむと、遠くから見るみたいに小さく並ぶ（部屋・見え方ごとに覚える）。全部が画面に収まったらそれ以上は小さくならない。左下の「元の大きさ」で戻る。</li>
     <li>作品が多いと右端に「あ・か・さ…」や年が出る。なぞるとその場所まで飛べる（並び順に合わせて変わる）。</li>
     <li>アルバム・シーズンのあるアニメ・続きものの本・まとめは、押すとその場で中身が並ぶ。もう一回押すと閉じる。</li>
@@ -291,8 +294,8 @@
   <details><summary>シリーズ・巻・シーズン・まとめ</summary><ul>
     <li><b>シリーズもの</b>：巻ごと（話ごと）に写真・評価・感想、どこまで読んだか、持ってる巻を残せる。</li>
     <li><b>話で数える</b>：漫画や本を1話ずつ記録。単行本の巻も作れて、巻ごとに表紙・評価・持ってる／ほしい・値段を残せる。縦読みの作品は「種類」で縦読みにすると巻は出ない。</li>
-    <li><b>シーズン</b>：アニメの1期・2期…を1つの作品の中に作る。話はシーズンごとに第1話から。</li>
-    <li><b>まとめ</b>：ジョジョの3部・4部みたいな、同じシリーズの別の作品を一覧で1枚にまとめる。ティア表ではそれぞれ別に並ぶ。</li>
+    <li><b>シーズン</b>：アニメの1期・2期…を、作品のページの「＋ シーズンを足す」で追加する。追加画面は普通の作品と同じで、シーズンごとに評価・感想・話数・観た日を書ける。一覧では元の作品にまとまって、押すと並ぶ（シーズンを押すとそのページへ）。話はシーズンごとに第1話から。</li>
+    <li><b>まとめ</b>：ジョジョの3部・4部みたいな、同じシリーズの別の作品を一覧で1枚にまとめる。まとめを開いて「＋ 追加」で、新しい作品をそのまま追加できる。ティア表ではそれぞれ別に並ぶ。</li>
     <li><b>関連作品</b>：原作とアニメ、主題歌みたいに、部屋をまたいでつなげる。</li>
   </ul></details>
   <details><summary>音楽</summary><ul>
