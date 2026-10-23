@@ -1018,3 +1018,41 @@ li.kidhead{list-style:none;margin:6px 0}
 .prl{font-style:normal;font:600 10.5px/1 var(--gothic);color:var(--acc);margin-left:6px;padding:2px 6px;border-radius:8px;border:1px solid color-mix(in srgb,var(--acc) 50%,transparent);vertical-align:2px}
 .vsea{display:block;font-style:normal;font:700 12px/1.2 var(--gothic);color:var(--acc);margin-bottom:2px}
 .parhint{margin-top:-8px;color:var(--acc)}
+
+/* ===== v39 開いた作品はそのまま、ボタンはその作品の下に ===== */
+.kbts{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.kb{display:inline-block;padding:5px 9px;border-radius:10px;border:1px solid var(--line);background:var(--card);font:600 11.5px/1 var(--gothic);color:var(--ink);white-space:nowrap}
+.kb:active{transform:scale(.94)}
+.sw.kctl{display:flex;align-items:flex-end;padding:0 2px 6px}
+.sw.kctl .kbts{flex-direction:column;gap:4px;margin:0}
+.sw.kctl .kb{padding:6px 7px;font-size:10.5px}
+.ph.mosaic{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;background:#111}
+.ph.mosaic>.ph{position:relative;overflow:hidden}
+#list.dense .kbts{display:none}
+
+/* ===== v40 つまむと横に並ぶ数が増える ===== */
+#list.fixcols>.covers,#list.fixcols>.discs,#list.fixcols>.screens{grid-template-columns:repeat(var(--cols),minmax(0,1fr));gap:14px 8px}
+#list.fixcols>.gallery{columns:var(--cols)}
+
+/* 一覧を2列・3列に */
+#list.lcols>ul.rows{display:grid;grid-template-columns:repeat(var(--lc),minmax(0,1fr));column-gap:12px}
+#list.lcols>ul.rows>li.kidsli,#list.lcols>ul.rows>li.kidhead{grid-column:1/-1}
+#list.lcols .row{gap:8px;padding:8px 2px}
+#list.lcols .row .th:not(.sq){width:30px;height:44px}
+#list.lcols .row .th.sq{width:34px;height:34px;margin:4px 0}
+#list.lcols .row b{font-size:13px}
+#list.lcols .row small{font-size:10.5px}
+#list.lcols .row .pill{display:none}
+#list.lcols .row .rt b{font-size:14px}
+#list.lcols .row .rt br,#list.lcols .row .rt .stars{display:none}
+#list.lc3 .row .rt,#list.lc3 .row small{display:none}
+#list.lc3 .row .th:not(.sq){width:24px;height:36px}
+#list.lc3 .row .th.sq{width:28px;height:28px}
+#list.lc3 .row b{font-size:12px}
+/* ティアの1段に並ぶ数 */
+#list.tcols .tier .ti{display:grid;grid-template-columns:repeat(var(--tn),minmax(0,1fr));gap:3px}
+#list.tcols .tier .ti button{width:auto;min-width:0}
+#list.tcols .tier .ti .th{width:100%;height:auto;aspect-ratio:2/3}
+#list.tcols .tier .ti .th.sq{aspect-ratio:1;height:auto}
+#list.tcols .tier.empty-t .ti{display:flex}
+#list.lcols>ul.rows>li:has(.kbts){grid-column:1/-1}
