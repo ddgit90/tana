@@ -1056,3 +1056,24 @@ li.kidhead{list-style:none;margin:6px 0}
 #list.tcols .tier .ti .th.sq{aspect-ratio:1;height:auto}
 #list.tcols .tier.empty-t .ti{display:flex}
 #list.lcols>ul.rows>li:has(.kbts){grid-column:1/-1}
+
+/* 開いてるとき：数字と「閉じる」を1行に */
+.kline{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;margin-top:6px;max-width:100%;overflow:hidden}
+.kline .xbtn{margin:0}
+.kline .kb{padding:4px 8px;font-size:11px}
+.cv .kline,.sc .kline,.jk .kline{margin-top:6px}
+#list.dense .kline .kb{display:none}
+#list.dense .cv .kline .xbtn,#list.dense .sc .kline .xbtn{display:inline-block}
+/* まとめ：隣同士の表紙の間の短い線 */
+#list{position:relative}
+#list .glk{position:absolute;z-index:2;background:var(--acc);border-radius:1px;pointer-events:none;opacity:.85}
+/* ボタンは中身が上下中央に寄るので、行の中で背が高いカードがあると表紙が上にずれる → 上でそろえる */
+.covers>button,.screens>button,.discs>button{align-self:start}
+
+/* 音楽の「曲」：見分けの印 */
+.mtag{display:inline-block;margin:3px 4px 0 0;padding:1px 6px;border-radius:6px;border:1px solid currentColor;font:700 9.5px/1.5 var(--gothic);letter-spacing:.04em;color:var(--sub);font-style:normal;vertical-align:middle;white-space:nowrap}
+.mtag.alb{background:var(--acc);border-color:var(--acc);color:var(--accInk)}
+.mtag.in{border:0;padding:1px 0;font-weight:600;letter-spacing:0;white-space:normal}
+.row .tx .mtag{margin-top:4px}
+.cv small.mt{line-height:1.2}
+.jk small.mt,.cv small.mt{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
