@@ -7,6 +7,7 @@
 /* ===== 部屋ごとの色 ===== */
 body,body[data-cat="manga"]{--room:#23317a;--room2:#1a255e;--ink:#f2f3fb;--sub:#a9b2df;--acc:#ffd23f;--accInk:#1b1f33;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--field:rgba(255,255,255,.09);--shelf:#121a4a;--glow:rgba(255,210,63,.18);color-scheme:dark}
 body[data-cat="anime"]{--room:#0f3d4a;--room2:#0a2d37;--ink:#eef7f8;--sub:#9cc4cb;--acc:#ff7aa8;--accInk:#2a0b17;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--field:rgba(255,255,255,.09);--shelf:#082630;--glow:rgba(255,122,168,.18);color-scheme:dark}
+body[data-cat="drama"]{--room:#3a2614;--room2:#2a1b0d;--ink:#f7efe4;--sub:#cdb597;--acc:#8fd3ff;--accInk:#0b1d29;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--field:rgba(255,255,255,.09);--shelf:#1e1308;--glow:rgba(143,211,255,.16);color-scheme:dark}
 body[data-cat="movie"]{--room:#3d0c18;--room2:#2b0711;--ink:#f8ecea;--sub:#d6a3ab;--acc:#f6c25b;--accInk:#2a0a12;--card:rgba(255,255,255,.06);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#1f040b;--glow:rgba(246,194,91,.16);color-scheme:dark}
 body[data-cat="book"]{--room:#143c2f;--room2:#0e2c22;--ink:#eef4ee;--sub:#9ec1b1;--acc:#f4a48c;--accInk:#2a1410;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.14);--field:rgba(255,255,255,.08);--shelf:#0a2219;--glow:rgba(244,164,140,.16);color-scheme:dark}
 body[data-cat="game"]{--room:#2a1d52;--room2:#1f1540;--ink:#f1eefb;--sub:#b3a8d8;--acc:#6ff0c8;--accInk:#14102a;--card:rgba(255,255,255,.07);--line:rgba(255,255,255,.15);--field:rgba(255,255,255,.09);--shelf:#170f33;--glow:rgba(111,240,200,.16);color-scheme:dark}
@@ -16,6 +17,7 @@ body[data-cat="art"]{--room:#ecebe7;--room2:#e1e0da;--ink:#1c1c1e;--sub:#686763;
 body.night{--lamp:rgba(255,196,120,.11)}
 body.night[data-cat="manga"]{--room:#1b2662;--room2:#141d4c}
 body.night[data-cat="anime"]{--room:#0b313c;--room2:#07242d}
+body.night[data-cat="drama"]{--room:#30200f;--room2:#22160a}
 body.night[data-cat="movie"]{--room:#310913;--room2:#22050d}
 body.night[data-cat="book"]{--room:#103126;--room2:#0b241b}
 body.night[data-cat="game"]{--room:#221745;--room2:#191035}
@@ -1077,3 +1079,31 @@ li.kidhead{list-style:none;margin:6px 0}
 .row .tx .mtag{margin-top:4px}
 .cv small.mt{line-height:1.2}
 .jk small.mt,.cv small.mt{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
+/* 巻・話の写真がまだのときは表紙を出して、小さく「表紙と同じ」 */
+.pv{position:relative}
+.pv .pvsame{position:absolute;left:6px;bottom:6px;padding:2px 7px;border-radius:8px;background:rgba(0,0,0,.55);color:#fff;font:600 10px/1.4 var(--gothic)}
+
+/* 背表紙：上に表紙の絵（あれば） */
+.spine .sim,.sv .sim{position:absolute;z-index:1;top:0;left:0;right:0;overflow:hidden;pointer-events:none}
+.spine .sim img,.sv .sim img{display:block;width:100%;height:100%;object-fit:cover}
+.spine .sim .gen{display:none}
+.spine:has(> .sim){padding-top:calc(var(--ih) + 8px)}
+/* 巻ごとの背表紙を並べる */
+.spine.sset{width:auto;height:var(--h);padding:0;background:none;display:flex;align-items:flex-end;gap:1px;writing-mode:horizontal-tb}
+.spine.sset::before,.spine.sset::after{display:none}
+.sv{position:relative;display:flex;align-items:center;justify-content:flex-start;width:22px;height:var(--h);padding:12px 0 24px;background:var(--col);color:var(--fg);border-radius:2px 2px 0 0;writing-mode:vertical-rl;font:600 var(--fs,11px)/1.1 var(--mincho);letter-spacing:.04em;transform-style:preserve-3d}
+.sv.im{padding-top:38px}
+.sv .sim{height:30px}
+.sv::before{content:"";position:absolute;left:0;top:0;width:100%;height:16px;transform-origin:50% 0;transform:rotateX(-90deg);background:repeating-linear-gradient(90deg,#efe8d8 0 2px,#d9d0bd 2px 3px)}
+.sv::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(255,255,255,.16),transparent 35%,transparent 65%,rgba(0,0,0,.26))}
+.sv span{position:relative;z-index:1;max-height:100%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.sv .vb{position:absolute;z-index:1;bottom:6px;left:0;right:0;writing-mode:horizontal-tb;font:700 9px/1 var(--gothic);font-style:normal;text-align:center;opacity:.9;white-space:nowrap;letter-spacing:-.02em}
+.sv.un{filter:saturate(.55) brightness(.78)}
+.spine.sset .rib{right:2px}
+/* ライブ映像：円盤の代わりに、映像のケース（横長）っぽく */
+.jk.vid .rec{display:none}
+.jk.vid .sl{left:0;right:0;width:100%;aspect-ratio:auto;border-radius:4px}
+.jk.vid .sl::after{content:"";position:absolute;z-index:3;right:8px;bottom:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.55) no-repeat center/12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M3 1.5v9l7.5-4.5z' fill='%23fff'/%3E%3C/svg%3E")}
+.g-music.vid i{display:none}
+.g-music.vid::after{content:"";position:absolute;inset:auto 0 0 0;height:28%;background:linear-gradient(transparent,rgba(0,0,0,.35));pointer-events:none}
+#moveBtn:not([hidden]){display:block;margin:4px 2px 12px}

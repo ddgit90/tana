@@ -51,6 +51,7 @@
   <span class="ind"></span>
   <button class="dk" data-cat="manga"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 5.5h14v9H9.5L6 18v-3.5H4z"/><path d="M8 9h6M8 11.5h4" stroke-linecap="round"/></svg><span>漫画</span></button>
   <button class="dk" data-cat="anime"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="7" width="16" height="11" rx="2.5"/><path d="M8 3.5 11 7l3-3.5"/><path d="m9.5 10.5 3.5 2-3.5 2z" fill="currentColor"/></svg><span>アニメ</span></button>
+  <button class="dk" data-cat="drama"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="5" width="16" height="11" rx="2.5"/><path d="M8 19.5h6M11 16v3.5"/><path d="M11 13.4c-2.6-1.6-3.6-2.8-3.6-4 0-1 .8-1.7 1.7-1.7.8 0 1.5.5 1.9 1.1.4-.6 1.1-1.1 1.9-1.1.9 0 1.7.7 1.7 1.7 0 1.2-1 2.4-3.6 4z" fill="currentColor" stroke="none"/></svg><span>ドラマ</span></button>
   <button class="dk" data-cat="movie"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="5" width="15" height="12" rx="1.5"/><path d="M7 5v12M15 5v12M3.5 9h3.5M3.5 13h3.5M15 9h3.5M15 13h3.5"/></svg><span>映画</span></button>
   <button class="dk" data-cat="music"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M8.5 16.5V5.5l9-2v11"/><circle cx="6.3" cy="16.5" r="2.3"/><circle cx="15.3" cy="14.5" r="2.3"/></svg><span>音楽</span></button>
   <button class="dk" data-cat="book"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M11 6.5C9 5 6.5 4.8 3.5 5.3v11c3-.5 5.5-.3 7.5 1.2 2-1.5 4.5-1.7 7.5-1.2v-11c-3-.5-5.5-.3-7.5 1.2zM11 6.5v11"/></svg><span>本</span></button>
@@ -181,6 +182,7 @@
     <div class="tagpick" id="tagSel"></div>
     <input type="hidden" name="tags">
   </div>
+  <button type="button" class="lnk" id="moveBtn" data-act="moveroom" hidden>部屋を移す ›</button>
   <div class="acts"><button type="button" class="btn dan" id="delBtn" data-act="delete">消す</button><button type="button" class="btn" data-act="close">やめる</button><button class="btn pri" value="ok">保存</button></div>
 </form></dialog>
 <datalist id="pfList"><option value="Switch"><option value="Switch 2"><option value="PS5"><option value="PS4"><option value="Xbox"><option value="PC（Steam）"><option value="スマホ"><option value="レトロ"></datalist>
@@ -209,7 +211,7 @@
 <!-- トリミング -->
 <dialog id="dCrop"><div class="sh">
   <h3>トリミング</h3>
-  <div class="seg sm" id="cropMode"><button type="button" data-cm="move" class="on">写真を動かす</button><button type="button" data-cm="free">枠で切り抜く</button></div>
+  <div class="seg sm" id="cropMode"><button type="button" data-cm="free" class="on">枠で切り抜く</button><button type="button" data-cm="move">写真を動かす</button></div>
   <p class="hint" id="cropHint">指でずらして、つまみ（か2本指）で大きさを変える。</p>
   <div class="seg sm" id="cropAr"><button type="button" data-ar="0.6667">縦長</button><button type="button" data-ar="1">正方形</button><button type="button" data-ar="1.6">横長</button></div>
   <div class="crop" id="cropBox"><img id="cropImg" alt=""><div id="cropSel" hidden><i data-h="tl"></i><i data-h="tr"></i><i data-h="bl"></i><i data-h="br"></i><i data-h="t"></i><i data-h="b"></i><i data-h="l"></i><i data-h="r"></i></div></div>
@@ -262,7 +264,7 @@
   <h3>蔵の使い方</h3>
   <p class="hint" style="margin-top:-6px">読んだ・観た・聴いたものを、部屋ごとにしまっておく記録の蔵。記録はこのiPhoneの中だけにあって、どこにも送らない。見たいところを押すと開く。</p>
   <details><summary>部屋</summary><ul>
-    <li>下のバーで、漫画・アニメ・映画・音楽・本・ゲーム・芸術の部屋を切り替える。</li>
+    <li>下のバーで、漫画・アニメ・ドラマ・映画・音楽・本・ゲーム・芸術の部屋を切り替える。使わない部屋は設定で消せる。</li>
     <li>使わない部屋は、設定の「表示する部屋」で隠せる（記録は消えない）。</li>
     <li>上の「つぎ・すべて・未読…」のチップで、状態ごとに見られる。</li>
   </ul></details>
@@ -284,7 +286,7 @@
     <li>並べ替え（追加順など）は、同じのをもう一度押すと上下が逆になる（↓↑で表示）。</li>
     <li>2本指でつまむと、1段ずつ細かく並ぶ。表紙は横に3つ→4つ→5つ…（並んでる数まで）、一覧は1列→2列→3列、ティア表は1段に並ぶ数が1つ〜いちばん多い段の数まで変わる、棚は全体が小さくなる。広げると1段ずつ戻る。部屋・見え方ごとに覚える。</li>
     <li>作品が多いと右端に「あ・か・さ…」や年が出る。なぞるとその場所まで飛べる（並び順に合わせて変わる）。</li>
-    <li>アルバム・シーズンのあるアニメ・続きものの本は、押すとその場で中身が並ぶ。開いた表紙の下の「▴ 2」みたいな数字を押すと閉じる。開いた表紙を押すと作品のページへ。シーズンは、開いた表紙がそのまま1期になる。</li>
+    <li>アルバム・シーズンのあるアニメ・ドラマ・続きものの本は、押すとその場で中身が並ぶ。開いた表紙の下の「▴ 2」みたいな数字を押すと閉じる。開いた表紙を押すと作品のページへ。シーズンは、開いた表紙がそのまま1期になる。</li>
   </ul></details>
   <details><summary>絞り込み・タグ・棚</summary><ul>
     <li>「絞り込み」でタグや作者、持ち方などをいくつか選んで「絞り込む」。</li>
@@ -294,7 +296,7 @@
   <details><summary>シリーズ・巻・シーズン・まとめ</summary><ul>
     <li><b>シリーズもの</b>：巻ごと（話ごと）に写真・評価・感想、どこまで読んだか、持ってる巻を残せる。</li>
     <li><b>話で数える</b>：漫画や本を1話ずつ記録。単行本の巻も作れて、巻ごとに表紙・評価・持ってる／ほしい・値段を残せる。縦読みの作品は「種類」で縦読みにすると巻は出ない。</li>
-    <li><b>シーズン</b>：アニメの1期・2期…を、作品のページの「＋ シーズンを足す」で追加する。追加画面は普通の作品と同じで、シーズンごとに評価・感想・話数・観た日を書ける。一覧では元の作品にまとまって、押すと並ぶ（シーズンを押すとそのページへ）。話はシーズンごとに第1話から。</li>
+    <li><b>シーズン</b>：アニメ・ドラマの1期・2期…を、作品のページの「＋ シーズンを足す」で追加する。追加画面は普通の作品と同じで、シーズンごとに評価・感想・話数・観た日を書ける。一覧では元の作品にまとまって、押すと並ぶ（シーズンを押すとそのページへ）。話はシーズンごとに第1話から。</li>
     <li><b>まとめ</b>：ジョジョの3部・4部みたいな、同じシリーズの別の作品をまとめる。一覧では普通の作品と同じように並んで、同じまとめの作品は隣同士になって表紙の間に短い線が入る。作品のページの「まとめ」から編集・追加できる。ティア表ではそれぞれ別に並ぶ。</li>
     <li><b>関連作品</b>：原作とアニメ、主題歌みたいに、部屋をまたいでつなげる。</li>
   </ul></details>
