@@ -53,6 +53,7 @@
   <button class="dk" data-cat="anime"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="7" width="16" height="11" rx="2.5"/><path d="M8 3.5 11 7l3-3.5"/><path d="m9.5 10.5 3.5 2-3.5 2z" fill="currentColor"/></svg><span>アニメ</span></button>
   <button class="dk" data-cat="drama"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="5" width="16" height="11" rx="2.5"/><path d="M8 19.5h6M11 16v3.5"/><path d="M11 13.4c-2.6-1.6-3.6-2.8-3.6-4 0-1 .8-1.7 1.7-1.7.8 0 1.5.5 1.9 1.1.4-.6 1.1-1.1 1.9-1.1.9 0 1.7.7 1.7 1.7 0 1.2-1 2.4-3.6 4z" fill="currentColor" stroke="none"/></svg><span>ドラマ</span></button>
   <button class="dk" data-cat="movie"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.5" y="5" width="15" height="12" rx="1.5"/><path d="M7 5v12M15 5v12M3.5 9h3.5M3.5 13h3.5M15 9h3.5M15 13h3.5"/></svg><span>映画</span></button>
+  <button class="dk" data-cat="owarai"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="6" height="10" rx="3"/><path d="M5.5 10a5.5 5.5 0 0 0 11 0M11 15.5v4M7.5 19.5h7"/></svg><span>お笑い</span></button>
   <button class="dk" data-cat="music"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M8.5 16.5V5.5l9-2v11"/><circle cx="6.3" cy="16.5" r="2.3"/><circle cx="15.3" cy="14.5" r="2.3"/></svg><span>音楽</span></button>
   <button class="dk" data-cat="book"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M11 6.5C9 5 6.5 4.8 3.5 5.3v11c3-.5 5.5-.3 7.5 1.2 2-1.5 4.5-1.7 7.5-1.2v-11c-3-.5-5.5-.3-7.5 1.2zM11 6.5v11"/></svg><span>本</span></button>
   <button class="dk" data-cat="game"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M7 7.5h8c2.5 0 4 2.2 4.3 5.3.3 3-1.3 4.2-2.8 3.3L14 14.5H8l-2.5 1.6c-1.5.9-3.1-.3-2.8-3.3C3 9.7 4.5 7.5 7 7.5z"/><path d="M7.5 10v3M6 11.5h3"/><circle cx="14.5" cy="10.5" r=".4" fill="currentColor"/><circle cx="16" cy="12.5" r=".4" fill="currentColor"/></svg><span>ゲーム</span></button>
@@ -75,7 +76,7 @@
     </div>
   </div>
   <p class="hint" id="photoHint" hidden>巻ごとの写真は、作品のページで巻をタップすると入れられる。</p>
-  <label class="f">タイトル<input name="title" required autocomplete="off" maxlength="120"></label>
+  <label class="f"><span id="titleL">タイトル</span><input name="title" required autocomplete="off" maxlength="120"></label>
   <p class="hint dup" id="dupHint" hidden></p>
   <label class="f adv">よみがな（なくてもOK。入れるとタイトル順が五十音どおりになる）<input name="yomi" autocomplete="off" maxlength="120" placeholder="例：しんげきのきょじん"></label>
   <div class="r2">
@@ -85,10 +86,16 @@
   <p class="hint parhint" id="parHint" hidden></p>
   <div class="rolepick" id="rolePick" hidden></div>
   <div class="tagpick qpick" data-q="creator"></div>
+  <div class="gnrF"><div class="gnrh"><span class="hint">ジャンル</span><div class="fchips" id="gnrSel"></div><button type="button" class="lnk" id="gnrPickB" data-act="gnrpick">＋ 選ぶ</button></div>
+    <div id="gnrPick" hidden><div class="fchips" id="gnrList"></div><div class="addrow"><label class="f"><input id="gnrNew" autocomplete="off" maxlength="20" placeholder="ないときは入れる（例：バトル）" aria-label="新しいジャンル"></label><button type="button" class="btn sm" data-act="gnradd">足す</button></div></div>
+    <input type="hidden" name="genre"></div>
   <div id="kindF"><span class="hint">種類</span><div class="seg sm" id="kindSeg" style="margin-top:6px"></div></div>
+  <div id="owF" hidden>
+    <label class="f">番組・大会・会場（なくてもOK）<input name="show" autocomplete="off" maxlength="60" placeholder="例：M-1グランプリ2025 決勝"></label>
+    <label class="f">動画のリンク（1行に1つ。URLのあとに「1:23」で何分何秒から、そのあとに名前も書ける）<textarea name="vids" maxlength="4000" placeholder="https://youtu.be/xxxxxxx&#10;https://youtu.be/xxxxxxx 2:15 ここが一番好き"></textarea></label>
+    <p class="hint">YouTubeのリンクなら、写真を入れなくてもサムネが出る（ネットにつながってるときだけ）。動画そのものは保存しない。</p>
+  </div>
   <div id="musicF">
-    <label class="f">ジャンル<input name="genre" list="genreList" autocomplete="off" maxlength="30" placeholder="例：邦楽"></label>
-    <div class="tagpick" id="genreQuick" style="margin-top:6px"></div>
     <div id="clF" hidden style="margin-top:8px"><label class="f">演奏者（指揮者・オーケストラ・ソリストなど）<input name="perf" list="perfList" autocomplete="off" maxlength="120" placeholder="例：カラヤン／ベルリン・フィル"></label><div class="tagpick qpick" data-q="perf" style="margin-top:6px"></div><p class="hint" style="margin:6px 2px 0">クラシックのときだけ出る欄。上の欄は「作曲家」になる。演奏者でも絞り込めるし、名前を押すとその人の録音がまとめて見られる。</p></div>
     <div id="liveF">
       <div class="r2" style="margin-top:6px"><label class="f">ライブの日<input name="ldate" type="date"></label><label class="f">開演<input name="ltime" type="time"></label></div>
@@ -126,6 +133,11 @@
         <label class="f"><span id="volsL">今出てる巻数</span><input name="vols" inputmode="numeric" autocomplete="off" placeholder="例：12"></label>
         <label class="f"><span id="curL">読んだところ</span><input name="cur" inputmode="numeric" autocomplete="off" placeholder="例：5"></label>
       </div>
+      <div class="r2" id="epPair">
+        <label class="f" id="epsF"><span>話数（わかれば）</span><input name="eps" inputmode="numeric" autocomplete="off" placeholder="例：120"></label>
+        <label class="f" id="cureF"><span>読んだ話</span><input name="cure" inputmode="numeric" autocomplete="off" placeholder="例：48"></label>
+      </div>
+      <p class="hint" id="epHint">巻だけでも話だけでも、両方でもOK。話を入れると、話ごとに感想を残せて、巻（単行本）ごとの記録も持てる。</p>
       <label class="f" id="ownF" style="margin-top:10px"><span id="ownL">持ってる巻（飛び飛びでもOK。空なら記録しない）</span><input name="own" autocomplete="off" placeholder="例：1-5, 7, 9-10"></label>
       <div class="tg" style="margin-top:10px"><span id="finL">完結してる<small id="finH"></small></span><button type="button" class="sw2" id="doneSw" role="switch" aria-checked="false" aria-label="完結"></button></div>
     </div>
@@ -264,7 +276,7 @@
   <h3>蔵の使い方</h3>
   <p class="hint" style="margin-top:-6px">読んだ・観た・聴いたものを、部屋ごとにしまっておく記録の蔵。記録はこのiPhoneの中だけにあって、どこにも送らない。見たいところを押すと開く。</p>
   <details><summary>部屋</summary><ul>
-    <li>下のバーで、漫画・アニメ・ドラマ・映画・音楽・本・ゲーム・芸術の部屋を切り替える。使わない部屋は設定で消せる。</li>
+    <li>下のバーで、漫画・アニメ・ドラマ・映画・お笑い・音楽・本・ゲーム・芸術の部屋を切り替える。使わない部屋は設定で消せる。</li>
     <li>使わない部屋は、設定の「表示する部屋」で隠せる（記録は消えない）。</li>
     <li>上の「つぎ・すべて・未読…」のチップで、状態ごとに見られる。</li>
   </ul></details>
@@ -288,14 +300,22 @@
     <li>作品が多いと右端に「あ・か・さ…」や年が出る。なぞるとその場所まで飛べる（並び順に合わせて変わる）。</li>
     <li>アルバム・シーズンのあるアニメ・ドラマ・続きものの本は、押すとその場で中身が並ぶ。開いた表紙の下の「▴ 2」みたいな数字を押すと閉じる。開いた表紙を押すと作品のページへ。シーズンは、開いた表紙がそのまま1期になる。</li>
   </ul></details>
+  <details><summary>お笑い</summary><ul>
+    <li>漫才・コント・落語・漫談・ピン芸が最初からある。追加・編集の「種類」の「＋ 足す」で、大喜利やモノマネみたいに自分で足せる（設定から消せる）。</li>
+    <li>落語は「演目」と「噺家」で入れる。同じ演目を別の噺家で聴いたら、別々に入れて「まとめ」でくくると聴き比べられる。</li>
+    <li>動画はリンクで残す（動画そのものは保存しない）。「URL 1:23 名前」みたいに書くと、作品のページの「見返す」から、その時間のところをすぐ開ける。YouTubeならサムネも出る。</li>
+    <li>棚の見え方は、YouTubeみたいな横長のサムネで並ぶ。</li>
+  </ul></details>
   <details><summary>絞り込み・タグ・棚</summary><ul>
-    <li>「絞り込み」でタグや作者、持ち方などをいくつか選んで「絞り込む」。</li>
-    <li>タグはグループ（ジャンル・俳優・気分など）に分けて並べられる。</li>
+    <li>「絞り込み」を押すと項目（棚・ジャンル・作者・持ち方・タグのグループ…）が並ぶ。項目を押すと、その中の候補だけの画面になる。いくつか選んで「絞り込む」。</li>
+    <li><b>ジャンル</b>：全部の部屋で付けられる（いくつでもOK）。追加・編集の「ジャンル ＋ 選ぶ」から。タグの「ジャンル」グループで分けてたなら、タグの整理の「ジャンルに移す」でまとめて移せる。</li>
+    <li>タグはグループ（俳優・気分など）に分けて並べられる。タグを選ぶ画面はグループごとのタブになって、新しく作るときに入れるグループも選べる。</li>
+    <li>監督・作者などは、役割のボタンを押すと、その役割で登録した名前が出る。押すと入る。</li>
     <li>棚は自分で作る本棚。「殿堂入り」みたいに好きな作品を入れておける。</li>
   </ul></details>
   <details><summary>シリーズ・巻・シーズン・まとめ</summary><ul>
     <li><b>シリーズもの</b>：巻ごと（話ごと）に写真・評価・感想、どこまで読んだか、持ってる巻を残せる。</li>
-    <li><b>話で数える</b>：漫画や本を1話ずつ記録。単行本の巻も作れて、巻ごとに表紙・評価・持ってる／ほしい・値段を残せる。縦読みの作品は「種類」で縦読みにすると巻は出ない。</li>
+    <li><b>巻と話</b>：漫画や本は、巻数と話数のどっちか、または両方を入れられる。話を入れると話ごとに感想を残せて、単行本の巻ごとに表紙・評価・持ってる／ほしい・値段も残せる。作品のページの「巻ごとの最後の話を入れる」で、どの話が何巻かを決めると、話の感想が巻ごとにまとまる。巻の並びの「読んだ」「持ってる」に切り替えると、タップで入れられる。縦読みの作品は「種類」で縦読みにすると巻は出ない。</li>
     <li><b>シーズン</b>：アニメ・ドラマの1期・2期…を、作品のページの「＋ シーズンを足す」で追加する。追加画面は普通の作品と同じで、シーズンごとに評価・感想・話数・観た日を書ける。一覧では元の作品にまとまって、押すと並ぶ（シーズンを押すとそのページへ）。話はシーズンごとに第1話から。</li>
     <li><b>まとめ</b>：ジョジョの3部・4部みたいな、同じシリーズの別の作品をまとめる。一覧では普通の作品と同じように並んで、同じまとめの作品は隣同士になって表紙の間に短い線が入る。作品のページの「まとめ」から編集・追加できる。ティア表ではそれぞれ別に並ぶ。</li>
     <li><b>関連作品</b>：原作とアニメ、主題歌みたいに、部屋をまたいでつなげる。</li>
@@ -442,12 +462,22 @@
   <button type="button" class="btn pri" data-act="close">閉じる</button>
 </div></dialog>
 
+<!-- 巻ごとの最後の話 -->
+<dialog id="dPmap"><div class="sh">
+  <h3>巻ごとの最後の話</h3>
+  <p class="hint">それぞれの巻が「第何話まで」かを入れる。わかる巻だけでOK（上から順に入れると、ずれない）。入れると、話の感想が巻ごとにまとまって、巻でも話でも進められる。</p>
+  <div id="pmB" class="pmlist"></div>
+  <div class="acts"><button type="button" class="btn" data-act="close">やめる</button><button type="button" class="btn pri" data-act="pmapok">決める</button></div>
+</div></dialog>
+
 <!-- タグを選ぶ（追加・編集） -->
 <dialog id="dTagP"><div class="sh">
   <h3>タグを選ぶ</h3>
   <p class="hint">押すと付く。もう一度押すと外れる。</p>
-  <div class="fchips" id="tpList"></div>
-  <div class="addrow"><label class="f"><input id="tpNew" autocomplete="off" maxlength="20" placeholder="新しいタグ（例：泣ける）" aria-label="新しいタグ"></label><button type="button" class="btn sm" data-act="tpadd">つくる</button></div>
+  <div class="tptabs" id="tpTabs" hidden></div>
+  <div id="tpList"></div>
+  <div class="tpnew"><div class="addrow"><label class="f"><input id="tpNew" autocomplete="off" maxlength="20" placeholder="新しいタグ（例：泣ける）" aria-label="新しいタグ"></label><button type="button" class="btn sm" data-act="tpadd">つくる</button></div>
+  <label class="tgsel">入れるグループ<select id="tpGrp"></select></label></div>
   <button type="button" class="btn pri" data-act="close">決める</button>
 </div></dialog>
 
@@ -479,6 +509,7 @@
     <div class="tg"><span>使ったお金を記録する<small>作品や巻ごとに値段を入れると、部屋ごと・年ごとの合計が出る</small></span><button type="button" class="sw2" id="moneySw" role="switch" aria-checked="false" aria-label="使ったお金"></button></div>
   </div>
   <div class="grp"><span class="gt">表示する部屋（隠しても記録は消えない）</span><div class="tagpick" id="roomTg"></div></div>
+  <div class="grp"><span class="gt">お笑いの、自分で足した種類（押すと消せる）</span><div class="tagpick" id="owkList"></div></div>
   <div class="grp" id="moneyG"><span class="gt">使ったお金</span><table class="ytable" id="ytable"></table></div>
   <div class="grp">
     <span class="gt">バックアップ</span>
