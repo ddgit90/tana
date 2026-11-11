@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v47';
+const VER = 'v48';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1324,27 +1324,50 @@ function drawSeasons(x) {
   if (p) { const sib = kidsOf(p); el.innerHTML = `<div class="box parts"><div class="parts-h"><b>『${esc(p.title)}』のシーズン</b><button class="lnk" data-goid="${esc(p.id)}">作品のページ ›</button></div><div class="pstrip">${sib.map((c) => seaCard(c, c.id === x.id)).join('')}</div></div>`; hydrate(el); return; }
   const K = kidsOf(x);
   let h = `<div class="parts-h"><b>シーズン</b><button class="lnk" data-act="seaadd">＋ シーズンを足す</button></div>`;
+  const nx = K.find((c) => c.status !== 'done' && !c.want) || null; /* 次に観るシーズン */
+  if (nx && K.some((c) => c.status === 'done' || c.status === 'doing')) h += `<button class="seanext" data-goid="${esc(nx.id)}"><span>つぎ</span><b>${esc(seaName(nx))}</b><small>${esc(seaProg(nx))}</small><i aria-hidden="true">›</i></button>`;
   if (!K.length) h += `<p class="hint">1期・2期…をこの作品の中に作れる。シーズンごとに、普通の作品と同じように評価・感想・話数・観た日を書ける。話はシーズンごとに第1話から。劇場版は映画の部屋に入れて「関連」でつなぐ。</p>`;
   else h += `<div class="pstrip">${K.map((c) => seaCard(c)).join('')}</div>`;
   h += `<button class="lnk" data-act="partmerge" style="margin-top:10px">別に登録したシーズンを取り込む</button>`;
   el.innerHTML = `<div class="box parts">${h}</div>`; hydrate(el);
 }
+/* ===== 作品（親）と最初のシーズンは同じにしておく =====
+   片方が空のところだけ、もう片方から入れる（表紙・スタッフ・年・ジャンル・タグ・観た形・配信）。
+   一度入れたところは覚えておいて、あとで自分で消しても入れ直さない */
+const FS_KEYS = ['creator', 'year', 'genre', 'media', 'app'];
+async function syncFirst(p) {
+  const k = kidsOf(p)[0]; if (!k) return false;
+  p.fs = p.fs || {}; let ch = false;
+  const pair = [[p, k, 'p'], [k, p, 'k']];
+  for (const f of FS_KEYS) for (const [to, from, d] of pair) { const key = `${d}.${f}`; if (!p.fs[key] && !to[f] && from[f]) { to[f] = from[f]; p.fs[key] = 1; ch = true; } }
+  for (const [to, from, d] of pair) { const key = `${d}.tags`; if (!p.fs[key] && !(to.tags || []).length && (from.tags || []).length) { to.tags = [...from.tags]; p.fs[key] = 1; ch = true; } }
+  for (const [to, from, d] of pair) {
+    const key = `${d}.img`; if (p.fs[key] || to.img || !from.img) continue;
+    try { const b = await idb.get(from.id); if (!b) continue; await idb.set(to.id, b); forget(to.id); to.img = true; if (from.ratio) to.ratio = from.ratio; if (from.color && !to.color) to.color = from.color; p.fs[key] = 1; ch = true; } catch (e) {}
+  }
+  if (ch) { touch(p); touch(k); }
+  return ch;
+}
+async function syncFirsts() { let ch = false; for (const [pid] of kidMap()) { const p = findItem(pid); if (p && await syncFirst(p)) ch = true; } return ch; }
 /* 親が自分で話数を記録してたら、それを「1期」にする */
 async function parentToFirst(x) {
   if (kidsOf(x).length || !(x.vols > 0 || x.cur > 0 || x.rating || (x.status !== 'none' && !x.want))) return null;
-  const c = fix({ id: uid(), cat: x.cat, par: x.id, sord: 1, title: `${x.title} 1期`, yomi: '', creator: x.creator || '', year: x.year || '', kind: x.kind || '', season: x.season || '', status: x.status, rating: x.rating || 0, rateFix: x.rateFix, series: !!x.series, vols: x.vols || 0, cur: x.cur || 0, done: !!x.done, unit: '', v: JSON.parse(JSON.stringify(x.v || {})), date: x.date || '', tags: [], links: [], fmt: [], media: x.media || '', app: x.app || '', created: x.created + 1, img: false, log: [{ t: Date.now(), k: 'add' }], rounds: [], round: 1, sh: [] });
+  const c = fix({ id: uid(), cat: x.cat, par: x.id, sord: 1, title: `${x.title} 1期`, yomi: '', creator: x.creator || '', year: x.year || '', genre: x.genre || '', media: x.media || '', app: x.app || '', kind: x.kind || '', season: x.season || '', status: x.status, rating: x.rating || 0, rateFix: x.rateFix, series: !!x.series, vols: x.vols || 0, cur: x.cur || 0, done: !!x.done, unit: '', v: JSON.parse(JSON.stringify(x.v || {})), date: x.date || '', tags: [], links: [], fmt: [], media: x.media || '', app: x.app || '', created: x.created + 1, img: false, log: [{ t: Date.now(), k: 'add' }], rounds: [], round: 1, sh: [] });
   for (const [k, d] of Object.entries(x.v || {})) if (d && d.img) { try { const b = await idb.get(`${x.id}~${k}`); if (b) await idb.set(`${c.id}~${k}`, b); } catch (e) {} }
   S.items.push(c);
   x.series = false; x.vols = 0; x.cur = 0; x.done = false; x.v = {}; x.coverVol = 0; x.rateFix = false; _kids = null;
   return c;
 }
 function openSeasonAdd(x) {
-  const n = kidsOf(x).length + 1;
+  const K = kidsOf(x), n = K.length + 1, src = K.length ? K[K.length - 1] : x; /* 原作・スタッフなどは、いちばん新しいシーズン（なければ作品）から */
+  const pick = (f) => src[f] || x[f] || '';
   openEdit(null);
-  Object.assign(draft, { cat: x.cat, par: x.id, sord: n, kind: x.kind || '', series: true, creator: x.creator || '', title: '' });
-  const f = $('#fEdit'); f.title.value = ''; f.title.placeholder = `例：${x.title} ${n}期`; f.creator.value = draft.creator; drawKind(); setSw('#serSw', true); $('#serF').hidden = false; drawProgF(); drawRelL();
+  Object.assign(draft, { cat: x.cat, par: x.id, sord: n, kind: x.kind || '', series: true, creator: pick('creator'), title: '', media: pick('media') });
+  const f = $('#fEdit'); f.title.value = ''; f.title.placeholder = `例：${x.title} ${n}期`; f.creator.value = draft.creator; f.genre.value = pick('genre'); drawGenre(); if (f.app) f.app.value = pick('app');
+  setTags([...((src.tags || []).length ? src.tags : x.tags || [])]);
+  drawKind(); drawHave(); setSw('#serSw', true); $('#serF').hidden = false; drawProgF(); drawRelL(); drawRolePick();
   $('#editT').textContent = `シーズンを追加（${x.title}）`; $('#bulkLink').hidden = true;
-  $('#parHint').hidden = false; $('#parHint').textContent = `${CATS[x.cat].creator}は『${x.title}』のを入れてある。シーズンで変わってたら、そのまま書き換えてね（消してもOK）。`;
+  $('#parHint').hidden = false; $('#parHint').textContent = `原作・${CATS[x.cat].creator}・ジャンル・タグなどは『${src === x ? x.title : seaName(src)}』のを入れてある。シーズンで変わってたら、そのまま書き換えてね（消してもOK）。`;
   setTimeout(() => { editSnap = editSig(); }, 80);
 }
 /* 前の版の「作品の中のシーズン（parts）」を、普通の作品のシーズンに移す（1回だけ） */
@@ -1995,7 +2018,7 @@ $('#fEdit').addEventListener('submit', async (e) => {
   if (!title) { e.preventDefault(); return toast('タイトルを入れてね'); }
   const isM = draft.cat === 'music', mk = isM ? kindOf(draft) : '', lines = isM && mk !== 'song' ? f.tracks.value.split('\n').map((q) => q.trim()).filter(Boolean).slice(0, 300) : [];
   const ser = isM ? mk !== 'song' : draft.series && !!C.ser && !(isAni(draft.cat) && !int(f.vols.value) && !int(f.cur.value) && !(draft.parts && draft.parts.length)), vols = isM ? lines.length : ser ? int(f.vols.value) : 0, m = C.media && mk !== 'live' ? draft.media || '' : '';
-  const both = ser && (draft.cat === 'manga' || draft.cat === 'book') && !isTate(draft), x0 = draft.id ? findItem(draft.id) : null;
+  const both = ser && (draft.cat === 'manga' || draft.cat === 'book') && !isTate(draft), x0 = draft.id ? findItem(draft.id) : null, was = x0 ? { creator: x0.creator, year: x0.year, genre: x0.genre, media: x0.media, app: x0.app, tags: (x0.tags || []).length, img: !!x0.img } : null;
   const eN = both ? int(f.eps.value) : 0, cE = both ? int(f.cure.value) : 0, vB = both ? int(f.vols.value) : 0, cB = both ? int(f.cur.value) : 0;
   /* 話を入れたら「話＋巻（単行本）」で持つ。話を消しても、話ごとの記録があればそのまま */
   const ep = both ? eN > 0 || cE > 0 || (!!x0 && x0.unit === 'ep' && hasEpData(x0)) : ser && draft.unit === 'ep' && (draft.cat === 'manga' || draft.cat === 'book');
@@ -2065,6 +2088,14 @@ $('#fEdit').addEventListener('submit', async (e) => {
     if (draft.newImg) { await idb.set(x.id, draft.newImg.blob); forget(x.id); x.img = true; x.ratio = +draft.newImg.ratio.toFixed(3); if (!draft.color) x.color = draft.newImg.color; if (ser) x.coverVol = 0; }
     else if (draft.rmImg && x.img) { await idb.del(x.id); forget(x.id); x.img = false; }
   } catch (err) { toast('写真を保存できなかった'); }
+  const sp = x.par ? findItem(x.par) : hasSea(x) ? x : null;
+  if (sp && was && (x === sp || kidsOf(sp)[0] === x)) { /* 自分で消したところは、もう片方から入れ直さない */
+    const d = x === sp ? 'p' : 'k'; sp.fs = sp.fs || {};
+    for (const f of FS_KEYS) if (was[f] && !x[f]) sp.fs[`${d}.${f}`] = 1;
+    if (was.tags && !(x.tags || []).length) sp.fs[`${d}.tags`] = 1;
+    if (was.img && !x.img) sp.fs[`${d}.img`] = 1;
+  }
+  if (sp) await syncFirst(sp); /* 作品と1期をそろえる */
   save(); render();
   if (curItem() === x) renderPage(x);
   toast(isNew ? `「${title}」を置いた` : '保存した');
@@ -3076,7 +3107,7 @@ document.addEventListener('click', (e) => {
     case 'partmerge': if (x) {
       showPick({ title: 'シーズンとして取り込む', hint: '「2期」みたいに別で登録した作品を選ぶと、この作品のシーズンになる。評価・感想・話の記録・写真も移る（元の登録は消える）。', okL: '取り込む', sel: new Set(), keep: true,
         cands: () => itemsTop(x.cat).filter((o) => o.id !== x.id), pri: (o) => (norm(o.title).includes(norm(x.title).slice(0, 4)) || (x.links || []).includes(o.id) ? 0 : 1), sub: (o) => [o.season, o.year].filter(Boolean).join('　'),
-        save: async (sel) => { const l = [...sel].map(findItem).filter(Boolean); if (!l.length) return; if (!confirm(`「${l.map((o) => o.title).join('」「')}」を、この作品のシーズンにする。それぞれの記録はそのまま残る。いい？`)) return; await parentToFirst(x); let n = kidsOf(x).length; for (const o of l.sort((a, b) => (+a.year || 9999) - (+b.year || 9999) || a.created - b.created)) { for (const c of kidsOf(o)) { c.par = x.id; c.sord = ++n; } o.par = x.id; o.sord = ++n; for (const g of S.groups) g.ids = g.ids.filter((q) => q !== o.id); _kids = null; } save(); render(); renderPage(x); toast(`${l.length}つをシーズンにした`); } });
+        save: async (sel) => { const l = [...sel].map(findItem).filter(Boolean); if (!l.length) return; if (!confirm(`「${l.map((o) => o.title).join('」「')}」を、この作品のシーズンにする。それぞれの記録はそのまま残る。いい？`)) return; await parentToFirst(x); let n = kidsOf(x).length; for (const o of l.sort((a, b) => (+a.year || 9999) - (+b.year || 9999) || a.created - b.created)) { for (const c of kidsOf(o)) { c.par = x.id; c.sord = ++n; } o.par = x.id; o.sord = ++n; for (const g of S.groups) g.ids = g.ids.filter((q) => q !== o.id); _kids = null; } await syncFirst(x); save(); render(); renderPage(x); toast(`${l.length}つをシーズンにした`); } });
     } break;
     case 'volplus': if (x) { x.vols = (x.vols || 0) + 1; logEv(x, 'vols', x.vols); touch(x); drawVols(x, x.vols); drawTl(x); toast(`${Cx(x).volN(x.vols)}を足した`); } break;
     case 'vjump': if (x) { const n = int($('#vjump').value); if (n >= 1 && n <= x.vols) openVol(x, n); } break;
@@ -3297,7 +3328,7 @@ function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('s
 
 try { syncSingles(true); } catch (e) {} /* 開いた直後から、シングルとアルバムの同じ曲がつながった状態で数える（評価が違う曲の確認は、いつもどおり保存したときに出す） */
 render(true);
-if (S.items.some((x) => isAni(x.cat) && Array.isArray(x.parts) && x.parts.length && !x.par)) migrateSeasons().then((n) => { if (n) { save(); render(); } });
+(S.items.some((x) => isAni(x.cat) && Array.isArray(x.parts) && x.parts.length && !x.par) ? migrateSeasons() : Promise.resolve(0)).then(async (n) => { const c = await syncFirsts(); if (n || c) { save(); render(); } });
 if ('serviceWorker' in navigator && window.isSecureContext && location.protocol !== 'file:') {
   const had = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => { document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => {}); }); }).catch(() => {});

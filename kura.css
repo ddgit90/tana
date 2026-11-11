@@ -1201,3 +1201,10 @@ li.kidhead{list-style:none;margin:6px 0}
 #kindSeg .kadd{border-style:dashed!important}
 #owkList .chip i{font-style:normal;margin-left:4px;opacity:.7}
 .yth .g-ow em{display:none}
+
+/* 作品のページ：次に観るシーズン */
+.seanext{display:flex;align-items:center;gap:10px;width:100%;margin:4px 0 10px;padding:10px 12px;border-radius:12px;background:var(--field);color:var(--ink);text-align:left}
+.seanext span{flex:none;padding:3px 8px;border-radius:99px;background:var(--acc);color:var(--accInk);font:800 11px/1.3 var(--gothic)}
+.seanext b{font-size:14px}
+.seanext small{color:var(--sub);font-size:12px;margin-left:auto}
+.seanext i{font-style:normal;color:var(--sub);font-size:18px}
