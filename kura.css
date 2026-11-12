@@ -111,6 +111,8 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .g-manga::before{content:"";position:absolute;inset:0 0 auto 0;height:58%;background:var(--col)}
 .g-manga b{top:7cqw;bottom:26%;right:7cqw;writing-mode:vertical-rl;font:800 17cqw/1.08 var(--gothic);overflow:hidden;color:#fff;-webkit-text-stroke:2.4cqw #111;paint-order:stroke fill}
 .g-manga i{left:6cqw;bottom:6cqw;width:20cqw;height:20cqw;border-radius:50%;background:#fff;color:#111;display:grid;place-items:center;font:800 11cqw/1 var(--gothic)}
+.g-manga em{position:absolute;right:6cqw;bottom:6cqw;z-index:1;font:800 8cqw/1 var(--gothic);font-style:normal;padding:1.6cqw 2.4cqw;background:#111;color:#fff;border-radius:1.5cqw}
+.jk .jx{display:inline-block;padding:7px 6px;margin:-7px -6px}
 .g-manga small{left:6cqw;top:7cqw;bottom:50%;writing-mode:vertical-rl;font:600 7.5cqw/1 var(--gothic);opacity:.85;overflow:hidden}
 /* 本：文庫風（罫線の枠と著者名） */
 .g-book{background:color-mix(in srgb,var(--col) 28%,#f4efe4);color:#2a2622}
