@@ -1,7 +1,7 @@
 (() => {
 'use strict';
 const KEY = 'kura.v1';
-const VER = 'v49';
+const VER = 'v51';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -115,7 +115,9 @@ function Cx(x) {
 }
 /* 話数が多いものは、箱を並べずに「＋1話」中心の軽い表示にする */
 const light = (x) => !!x.series && (x.unit === 'ep' || (isAni(x.cat) && x.vols > 60 && !(Array.isArray(x.parts) && x.parts.length)));
-const visRooms = () => { const h = S.set.hidden || []; const v = ORDER.filter((k) => !h.includes(k)); return v.length ? v : ['manga']; };
+/* 部屋の並び（設定でドラッグして変えられる。新しく増えた部屋は後ろに） */
+const roomOrder = () => { const o = (S.set && Array.isArray(S.set.order) ? S.set.order : []).filter((k, i, a) => ORDER.includes(k) && a.indexOf(k) === i); return [...o, ...ORDER.filter((k) => !o.includes(k))]; };
+const visRooms = () => { const h = S.set.hidden || []; const v = roomOrder().filter((k) => !h.includes(k)); return v.length ? v : [roomOrder()[0]]; };
 const PF = [[/switch|スイッチ/i, '#e4002b'], [/ps|プレステ|playstation/i, '#1f5fd1'], [/xbox/i, '#1a8a1a'], [/pc|steam/i, '#5b6170'], [/スマホ|ios|android|iphone/i, '#e8a020']];
 const pfColor = (p) => (PF.find(([r]) => r.test(p || '')) || [0, '#8a8fa3'])[1];
 const stLabel = (cat, st) => (CATS[cat].st.find((s) => s[0] === st) || CATS[cat].st[0])[1];
@@ -184,6 +186,7 @@ function normalize(d) {
   return o;
 }
 function fix(x) {
+  delete x.cn; delete x.added; /* v50で一時的に入れた「追加順」用の印は使わないので消す */
   x.created = x.created || Date.now(); x.updated = x.updated || x.created;
   if (!Array.isArray(x.log)) x.log = [{ t: x.created, k: 'add' }].concat(x.status === 'done' ? [{ t: whenT(x.date), k: 'st', v: 'done', d: x.date || '?' }] : []);
   x.rounds = x.rounds || []; x.round = x.round || 1; x.sh = x.sh || []; x.tags = Array.isArray(x.tags) ? x.tags : [];
@@ -340,6 +343,17 @@ function edgeRun(c, horiz, i, a, b) {
   else { if (i < 1 || i >= sw) return 0; for (let y = Math.max(0, a); y < Math.min(sh, b); y++) { if (Math.abs(L[y * sw + i] - L[y * sw + i - 1]) > 22) { if (++run > best) best = run; } else run = 0; } }
   return best;
 }
+/* 縦の線（列 i の左右の境目）が、上下にいちばん長く続いてる範囲 [上, 下]。少しの切れ目はつなぐ */
+function vSpan(c, i, t, b) {
+  const { L, sw, sh } = c; if (i < 1 || i >= sw) return null;
+  const tol = Math.max(2, Math.round(sh * 0.015)), e = (y) => { for (let k = i - 1; k <= i + 1; k++) if (k >= 1 && k < sw && Math.abs(L[y * sw + k] - L[y * sw + k - 1]) > 22) return true; return false; };
+  let best = null, s0 = -1, last = -1;
+  for (let y = Math.max(0, t - 4); y <= Math.min(sh - 1, b + 4) + 1; y++) {
+    if (y <= Math.min(sh - 1, b + 4) && e(y)) { if (s0 < 0) s0 = y; last = y; }
+    else if (s0 >= 0 && (y - last > tol || y > Math.min(sh - 1, b + 4))) { if (!best || last - s0 > best[1] - best[0]) best = [s0, last]; s0 = -1; }
+  }
+  return best;
+}
 /* 辺を、近くのはっきりした境目に吸いつける */
 function snapEdge(c, horiz, pos, a, b) {
   const f = c.k / c.fs, p = Math.round(pos * f), span = Math.max(1, b - a); let bi = -1, bs = 0;
@@ -358,6 +372,16 @@ function cropAuto() {
     if (lt >= 0) l = lt; if (rt2 >= 0) r = rt2 - 1;
     const tt = pick(true, t, t + Math.round(H * 0.6), 1, l, r, 0.55), bt = pick(true, b, b - Math.round(H * 0.6), -1, l, r, 0.55);
     if (tt >= 0) t = tt; if (bt >= 0) b = bt - 1;
+  }
+  /* 縦：表紙の左右のふち（縦の線）がどこからどこまで続いてるかで、上下を決める。下に文字や横線があっても引っぱられない */
+  const vs = vSpan(c, l, t, b), vr = vSpan(c, r + 1, t, b), need = Math.max(12, (b - t) * 0.25);
+  const S2 = [vs, vr].filter((q) => q && q[1] - q[0] >= need);
+  if (S2.length) {
+    const hs = (i) => edgeRun(c, true, i, l, r + 1) / Math.max(1, r + 1 - l);
+    const near = (y) => { let bi = y, bv = hs(y); for (let i = y - 3; i <= y + 3; i++) { const v = hs(i); if (v > bv) { bv = v; bi = i; } } return bi; };
+    const tops = S2.map((q) => near(q[0])), bots = S2.map((q) => near(q[1] + 1));
+    const nt = tops.reduce((p, q) => (hs(q) > hs(p) ? q : p)), nb = bots.reduce((p, q) => (hs(q) > hs(p) ? q : p));
+    if (nb - nt >= need) { t = nt; b = nb - 1; }
   }
   const f = c.fs / c.k; c.sel = { x: l * f, y: t * f, w: Math.max(20, (r - l + 1) * f), h: Math.max(20, (b - t + 1) * f) };
   cropSelDraw(); toast('表紙っぽいところを囲んだ。ずれてたら指で直してね');
@@ -686,6 +710,7 @@ function render(anim = false) {
     ui.sorts = [['new', '追加順'], ['upd', '更新順'], ['rate', '評価順'], ['title', 'タイトル順'], ['creator', `${C.creator.split('・')[0]}順`]];
   }
   $('#dock').style.gridTemplateColumns = `repeat(${vis.length},1fr)`; $('#dock .ind').style.width = `calc((100% - 12px) / ${vis.length})`;
+  { const D = $('#dock'), ro = roomOrder(); if ($$('#dock .dk').map((q) => q.dataset.cat).join() !== ro.join()) for (const k of ro) { const q = D.querySelector(`.dk[data-cat="${k}"]`); if (q) D.appendChild(q); } } /* 部屋の並び（設定で変えたとき） */
   $$('#dock .dk').forEach((b) => { const i = vis.indexOf(b.dataset.cat), on = b.dataset.cat === S.cat; b.hidden = i < 0; b.classList.toggle('on', on); b.setAttribute('aria-current', on ? 'page' : 'false'); if (on) $('#dock .ind').style.transform = `translateX(${i * 100}%)`; });
   const all = itemsTop(S.cat), done = all.filter((x) => x.status === 'done').length, rated = all.filter((x) => rt(x) > 0);
   const avg = rated.length ? rated.reduce((a, x) => a + rt(x), 0) / rated.length : 0;
@@ -1863,6 +1888,42 @@ const drawKind = () => {
   $('#titleL').textContent = ow ? (k === 'rakugo' ? '演目' : k === 'manzai' || k === 'konto' ? 'ネタの名前（わからなければ番組名などでもOK）' : 'タイトル・ネタの名前') : 'タイトル';
   if (ow) $('#creatorL').textContent = k === 'rakugo' ? '噺家' : '芸人・コンビ';
 };
+/* 「読んでる」「観てる」を押したら続きもの（話数を記録）を入れる。自分で切ったとき・読切・シーズンのある作品はそのまま */
+function autoSer() {
+  if (draft.status !== 'doing' || draft.want || draft.series || draft.serHand) return;
+  if (!['manga', 'book', 'anime', 'drama'].includes(draft.cat) || (draft.cat === 'manga' && draft.kind === 'yomi')) return;
+  if (draft.id && kidsOf(draft).length) return;
+  draft.series = true; setSw('#serSw', true); $('#serF').hidden = false; drawProgF(); drawEditRate(); drawRelL();
+}
+/* 設定の「表示する部屋」：ドラッグで並べ替え（先頭が下のタブのいちばん左）。押すだけなら今までどおり表示・非表示 */
+{
+  const box = $('#roomTg'); let dg = null, skip = false;
+  const pos = (el) => { const r = el.getBoundingClientRect(), m = new DOMMatrixReadOnly(getComputedStyle(el).transform); return { x: r.left - m.m41, y: r.top - m.m42 }; };
+  box.addEventListener('pointerdown', (e) => { const b = e.target.closest('[data-room]'); if (!b || (e.button && e.pointerType === 'mouse')) return; dg = { b, id: e.pointerId, x: e.clientX, y: e.clientY, on: false }; });
+  box.addEventListener('pointermove', (e) => {
+    if (!dg || e.pointerId !== dg.id) return;
+    const dx = e.clientX - dg.x, dy = e.clientY - dg.y;
+    if (!dg.on) { if (Math.hypot(dx, dy) < 8) return; dg.on = true; try { box.setPointerCapture(e.pointerId); } catch (er) {} dg.b.classList.add('drag'); box.classList.add('dragging'); }
+    e.preventDefault();
+    dg.b.style.transform = `translate(${dx}px,${dy}px)`;
+    const others = [...box.querySelectorAll('[data-room]')].filter((q) => q !== dg.b);
+    const hit = others.find((q) => { const r = q.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top - 3 && e.clientY <= r.bottom + 3; });
+    if (!hit) return;
+    const r = hit.getBoundingClientRect(), before = e.clientX < r.left + r.width / 2, ref = before ? hit : hit.nextSibling;
+    if (ref === dg.b || (before && hit.previousSibling === dg.b)) return;
+    const p0 = pos(dg.b); box.insertBefore(dg.b, ref); const p1 = pos(dg.b);
+    dg.x += p1.x - p0.x; dg.y += p1.y - p0.y; dg.b.style.transform = `translate(${e.clientX - dg.x}px,${e.clientY - dg.y}px)`;
+  });
+  const up = (e) => {
+    if (!dg || e.pointerId !== dg.id) return;
+    const d = dg; dg = null; if (!d.on) return;
+    d.b.classList.remove('drag'); box.classList.remove('dragging'); d.b.style.transform = ''; skip = true; setTimeout(() => { skip = false; }, 350);
+    const o = [...box.querySelectorAll('[data-room]')].map((q) => q.dataset.room);
+    if (o.join() !== roomOrder().join()) { S.set.order = o; save(); render(); toast('部屋の並びを変えた'); }
+  };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  box.addEventListener('click', (e) => { if (skip) { e.stopPropagation(); e.preventDefault(); skip = false; } }, true);
+}
 /* 前に入れた値を、押すだけで入れられるように（多すぎないよう上位だけ） */
 function drawQP() {
   const f = $('#fEdit'), m = draft.media || '';
@@ -1957,6 +2018,9 @@ function drawTagPick() {
   const have = new Set(curTags()), cnt = new Map();
   for (const x of S.items) for (const t of x.tags) { const c = cnt.get(t) || [0, 0]; c[x.cat === draft.cat ? 0 : 1]++; cnt.set(t, c); }
   for (const t of have) if (!cnt.has(t)) cnt.set(t, [0, 0]);
+  /* その部屋（漫画なら漫画）で使ったタグだけ出す。ほかの部屋のは「ほかの部屋のタグも出す」で */
+  const other = [...cnt].filter(([t, [a]]) => !a && !have.has(t)).length;
+  if (!ui.tpAll) for (const [t, [a]] of [...cnt]) if (!a && !have.has(t)) cnt.delete(t);
   const c1 = new Map([...cnt].map(([t, [a, b]]) => [t, a * 1000 + b])), G = groupTags(c1);
   const named = G.filter(([g]) => g && g !== 'その他'), tabs = G.length > 1 || named.length ? G.map(([g]) => g || 'その他') : [];
   if (!tabs.includes(ui.tpTab)) ui.tpTab = tabs[0] || '';
@@ -1964,7 +2028,7 @@ function drawTagPick() {
   $('#tpTabs').hidden = !tabs.length;
   $('#tpTabs').innerHTML = tabs.map((g) => { const l = (G.find(([q]) => (q || 'その他') === g) || [, []])[1], n = l.filter((t) => have.has(t)).length; return `<button type="button" class="${ui.tpTab === g ? 'on' : ''}" data-tptab="${esc(g)}">${esc(g)}${n ? `<small>${n}</small>` : ''}</button>`; }).join('');
   const l = tabs.length ? ((G.find(([q]) => (q || 'その他') === ui.tpTab) || [, []])[1]) : G.flatMap(([, q]) => q);
-  $('#tpList').innerHTML = c1.size ? `<div class="fchips">${l.map(chip).join('')}</div>` : '<p class="hint">まだタグがない。下でつくれる。</p>';
+  $('#tpList').innerHTML = (c1.size ? `<div class="fchips">${l.map(chip).join('')}</div>` : `<p class="hint">${CATS[draft.cat].name}のタグはまだない。下でつくれる。</p>`) + (other ? `<button type="button" class="lnk" data-act="tpall" style="margin-top:6px">${ui.tpAll ? `${CATS[draft.cat].name}のタグだけにする` : `ほかの部屋のタグも出す（${other}）`}</button>` : '');
   const sel = $('#tpGrp'), gs = TG(), cur = tabs.length && ui.tpTab !== 'その他' ? gs.findIndex((g) => g.name === ui.tpTab) : -1;
   sel.innerHTML = `<option value="-1">グループなし（その他）</option>${gs.map((g, i) => `<option value="${i}"${i === cur ? ' selected' : ''}>${esc(g.name)}</option>`).join('')}<option value="new">＋ 新しいグループ…</option>`;
 }
@@ -2164,7 +2228,7 @@ function openBoomPick(m) {
 }
 function openLinkPick() {
   showPick({ title: '関連作品を選ぶ', hint: 'ほかの部屋の作品も選べる（原作・アニメ化・主題歌など）。上で部屋を切り替えられる。つなぐと、両方のページに出る。', okL: '決める', sel: new Set(draft.links || []), cands: () => S.items.filter((x) => x.id !== draft.id),
-    tabs: [['all', 'すべて', () => true], ...ORDER.map((c) => [c, CATS[c].name, (x) => x.cat === c])],
+    tabs: [['all', 'すべて', () => true], ...roomOrder().map((c) => [c, CATS[c].name, (x) => x.cat === c])],
     sub: (x) => CATS[x.cat].short || CATS[x.cat].name, keep: true, save: (sel) => { draft.links = [...sel]; drawLinkChips(); } });
 }
 function drawPickTabs(all = pick.cands()) {
@@ -2372,7 +2436,7 @@ function drawBulk() {
   $('#bkKindF').hidden = !K; if (K) $('#bkKind').innerHTML = K.filter(([k]) => k !== 'live').map(([k, l]) => `<button type="button" data-bkind="${k}" class="${(bulk.kind || K[0][0]) === k ? 'on' : ''}">${l}</button>`).join('');
   $('#bkMediaF').hidden = !C.media; if (C.media) $('#bkMedia').innerHTML = C.media.map((k) => `<button type="button" data-bmedia="${k}" class="${bulk.media === k ? 'on' : ''}">${k}</button>`).join('');
   $('#bkOldRow').hidden = bulk.want; setSw('#bkOldSw', bulk.old && !bulk.want);
-  const tc = new Map(); for (const x of S.items) for (const t of x.tags) tc.set(t, (tc.get(t) || 0) + 1);
+  const tc = new Map(); for (const x of S.items) if (x.cat === S.cat) for (const t of x.tags) tc.set(t, (tc.get(t) || 0) + 1); /* その部屋のタグだけ */
   $('#bkTagsF').hidden = !tc.size; $('#bkTags').innerHTML = groupTags(tc).flatMap(([, l]) => l).slice(0, 24).map((t) => `<button type="button" class="chip${bulk.tags.includes(t) ? ' on' : ''}" data-btag="${esc(t)}">#${esc(t)}</button>`).join('');
   drawBulkPrev();
 }
@@ -2772,12 +2836,12 @@ function drawSettings() {
   setSw('#simpleSw', S.set.simple); setSw('#inlSw', S.set.inl);
   setSw('#todSw', S.set.tod); setSw('#moneySw', S.set.money); setSw('#dustSw', S.set.dust);
   drawOwk();
-  $('#roomTg').innerHTML = ORDER.map((k) => `<button type="button" class="chip${S.set.hidden.includes(k) ? '' : ' on'}" data-room="${k}">${CATS[k].short || CATS[k].name}</button>`).join('');
+  $('#roomTg').innerHTML = roomOrder().map((k) => `<button type="button" class="chip${S.set.hidden.includes(k) ? '' : ' on'}" data-room="${k}">${CATS[k].short || CATS[k].name}</button>`).join('');
   $('#moneyG').hidden = !S.set.money;
   if (S.set.money) {
     const yrs = new Map();
     for (const x of S.items) for (const [t, p] of spends(x)) { const yy = t ? new Date(t).getFullYear() : 0, m = yrs.get(yy) || {}; m[x.cat] = (m[x.cat] || 0) + p; yrs.set(yy, m); }
-    $('#ytable').innerHTML = yrs.size ? [...yrs].sort((a, b) => (b[0] || -1) - (a[0] || -1)).map(([yy, m]) => `<tr><td>${yy ? `${yy}年` : '時期不明'}<br><small class="hint">${ORDER.filter((k) => m[k]).map((k) => `${CATS[k].name} ${yen(m[k])}`).join('・')}</small></td><td>${yen(Object.values(m).reduce((s, p) => s + p, 0))}</td></tr>`).join('') : '<tr><td class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</td><td></td></tr>';
+    $('#ytable').innerHTML = yrs.size ? [...yrs].sort((a, b) => (b[0] || -1) - (a[0] || -1)).map(([yy, m]) => `<tr><td>${yy ? `${yy}年` : '時期不明'}<br><small class="hint">${roomOrder().filter((k) => m[k]).map((k) => `${CATS[k].name} ${yen(m[k])}`).join('・')}</small></td><td>${yen(Object.values(m).reduce((s, p) => s + p, 0))}</td></tr>`).join('') : '<tr><td class="hint">まだ値段が入ってない。作品の「編集」や、巻のシートから入れられる。</td><td></td></tr>';
   }
   const imgs = S.items.reduce((s, x) => s + imgKeys(x).length, 0);
   const d = S.lastBackup ? Math.floor((Date.now() - S.lastBackup) / 864e5) : null;
@@ -3009,7 +3073,7 @@ document.addEventListener('click', (e) => {
     }
     void C;
   }
-  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } if (draft.old && draft.status === 'done') draft.wm = 'none'; drawStSeg(); drawWhen(); drawBuy(); drawHave(); return; }
+  const est = t.closest('[data-est]'); if (est) { if (est.dataset.est === 'want') { draft.want = true; draft.status = 'none'; } else { draft.want = false; draft.status = est.dataset.est; } if (draft.old && draft.status === 'done') draft.wm = 'none'; autoSer(); drawStSeg(); drawWhen(); drawBuy(); drawHave(); return; }
   const bu = t.closest('#buySeg [data-buy]'); if (bu) { draft.buy = bu.dataset.buy; drawBuy(); if (draft.buy === 'year') setTimeout(() => $('#fEdit').buyY.focus(), 50); return; }
   const wmb = t.closest('[data-wm]'); if (wmb) { const box = wmb.closest('.whenui'), st = box.id === 'whenUI' ? draft : doneCtx; if (!st) return; st.date = readWhen(box, st) || st.date; st.wm = wmb.dataset.wm; drawWhenUI(box, st); return; }
   const es = t.closest('#editRate [data-estar]'); if (es) { const i = +es.dataset.estar; draft.rating = draft.rating === i ? i - 0.5 : i; drawEditRate(); $(`#editRate [data-estar="${i}"]`).classList.add('pop'); return; }
@@ -3051,7 +3115,8 @@ document.addEventListener('click', (e) => {
     case 'owkdel': { const n = a.dataset.k, c = CK[a.dataset.c] ? a.dataset.c : 'owarai', [sk, B, fb] = CK[c]; if (!n) break; const used = S.items.filter((x) => x.cat === c && x.kind === 'c:' + n).length; if (!confirm(`種類「${n}」を消す？${used ? `\n${used}${c === 'owarai' ? '本' : CATS[c].unit}は「${B[0][1]}」に戻る。` : ''}`)) break; S.set[sk] = (S.set[sk] || []).filter((q) => q !== n); for (const x of S.items) if (x.cat === c && x.kind === 'c:' + n) x.kind = fb; if (ui.kind === 'c:' + n) ui.kind = ''; syncOwKinds(); save(); render(); drawOwk(); break; }
     case 'gnrpick': ui.gnrOpen = !ui.gnrOpen; drawGenre(); if (ui.gnrOpen) setTimeout(() => $('#gnrPick').scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 30); break;
     case 'gnradd': { const v = $('#gnrNew').value.split(/[、,，\s]+/).map((q) => q.trim()).filter(Boolean); if (!v.length) { toast('ジャンルの名前を入れてね'); break; } setGenres([...gensOf({ genre: $('#fEdit').genre.value }), ...v]); $('#gnrNew').value = ''; break; }
-    case 'tagpick': $('#tpNew').value = ''; drawTagPick(); $('#dTagP').showModal(); break;
+    case 'tagpick': $('#tpNew').value = ''; ui.tpAll = false; drawTagPick(); $('#dTagP').showModal(); break;
+    case 'tpall': ui.tpAll = !ui.tpAll; drawTagPick(); break;
     case 'tpadd': {
       const v = $('#tpNew').value.split(/[\s、,，]+/).map((q) => q.replace(/^#/, '').trim()).filter(Boolean); if (!v.length) { toast('タグの名前を入れてね'); break; }
       let gi = $('#tpGrp').value;
@@ -3257,7 +3322,7 @@ $('#bkOldSw').addEventListener('click', () => { bulk.old = !bulk.old; drawBulk()
 let bkt; $('#bkTxt').addEventListener('input', () => { clearTimeout(bkt); bkt = setTimeout(drawBulkPrev, 200); });
 $('#bkPrev').addEventListener('change', (e) => { const c = e.target.closest('[data-brow]'); if (!c || !bulk.rows) return; bulk.rows[+c.dataset.brow].on = c.checked; c.closest('li').classList.toggle('off', !c.checked); const n = bulk.rows.filter((r) => r.on).length, sk = bulk.rows.length - n; $('#bkGo').textContent = n ? `${n}件追加する${sk ? `（${sk}件は飛ばす）` : ''}` : '追加する'; $('#bkGo').disabled = !n; });
 $('#wishSw').addEventListener('click', () => { draft.wish = !draft.wish; drawHave(); });
-$('#serSw').addEventListener('click', () => { draft.series = !draft.series; setSw('#serSw', draft.series); $('#serF').hidden = !draft.series; drawProgF(); drawEditRate(); drawRelL(); });
+$('#serSw').addEventListener('click', () => { draft.serHand = true; draft.series = !draft.series; setSw('#serSw', draft.series); $('#serF').hidden = !draft.series; drawProgF(); drawEditRate(); drawRelL(); });
 document.addEventListener('change', (e) => {
   const sel = e.target.closest('[data-tsel]'); if (!sel) return;
   const tg = sel.dataset.tsel, to = +sel.value;
